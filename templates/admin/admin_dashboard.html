@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl md:text-3xl font-bold">Dashboard</h2>
+    </div>
+
+    <!-- top cards + chart + right sidebar -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- main column -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Metrics cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Bugungi buyurtmalar</p>
+                        <p class="text-2xl md:text-3xl font-extrabold text-blue-600">{{ today_orders|default:0 }}</p>
+                        <p class="text-xs text-gray-400">Bugun qabul qilingan buyurtmalar</p>
+                    </div>
+                    <div class="text-3xl text-blue-400">📦</div>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Faol mijozlar</p>
+                        <p class="text-2xl md:text-3xl font-extrabold text-pink-600">{{ total_clients|default:0 }}</p>
+                        <p class="text-xs text-gray-400">Ro'yxatdagi jami mijozlar</p>
+                    </div>
+                    <div class="text-3xl text-pink-400">👥</div>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Kuryerlar (faol)</p>
+                        <p class="text-2xl md:text-3xl font-extrabold text-gray-900">{{ active_couriers|default:0 }}</p>
+                        <p class="text-xs text-gray-400">Hozir faol kuryerlar</p>
+                    </div>
+                    <div class="text-3xl text-green-400">🚚</div>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Qarz`dorlar</p>
+                        <p class="text-2xl md:text-3xl font-extrabold text-red-500">{{ debtors|default:0 }}</p>
+                        <p class="text-xs text-gray-400">Qarzga tushgan mijozlar</p>
+                    </div>
+                    <div class="text-3xl text-red-400">⚠️</div>
+                </div>
+            </div>
+
+            <!-- Weekly chart -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-semibold mb-4">Haftalik Buyurtmalar Statistikasi</h3>
+                <div class="h-64">
+                    <canvas id="weeklyOrdersChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- right sidebar -->
+        <aside class="space-y-6">
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h4 class="font-semibold mb-4">Top Mijozlar</h4>
+                <ul class="space-y-3">
+                    {% if top_clients %}
+                        {% for c in top_clients %}
+                        <li class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center">{{ c.full_name|slice:":1"|upper }}</div>
+                                <div>
+                                    <div class="font-medium">{{ c.full_name }}</div>
+                                    <div class="text-xs text-gray-400">—</div>
+                                </div>
+                            </div>
+                            <div class="text-sm font-semibold text-indigo-600">{{ c.orders_count }}</div>
+                        </li>
+                        {% endfor %}
+                    {% else %}
+                        {% for c in top_debtors %}
+                        <li class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center">{{ c.full_name|slice:":1"|upper }}</div>
+                                <div>
+                                    <div class="font-medium">{{ c.full_name }}</div>
+                                    <div class="text-xs text-gray-400">
+                                        {% if c.region %}
+                                            {% if c.region.name %}{{ c.region.name }}{% else %}{{ c.region }}{% endif %}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-sm font-semibold text-indigo-600">{{ c.debt }}</div>
+                        </li>
+                        {% empty %}
+                        <li class="text-gray-500">Top mijozlar topilmadi.</li>
+                        {% endfor %}
+                    {% endif %}
+                </ul>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h4 class="font-semibold mb-4">Eng ko'p yetkazgan kuryerlar</h4>
+                <ul class="space-y-3">
+                    {% if top_couriers %}
+                        {% for k in top_couriers %}
+                        <li class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center">{{ k.full_name|slice:":1"|upper }}</div>
+                                <div>
+                                    <div class="font-medium">{{ k.full_name }}</div>
+                                    <div class="text-xs text-gray-400">Delivered: {{ k.delivered }}</div>
+                                </div>
+                            </div>
+                            <div class="text-sm font-semibold text-indigo-600">{{ k.delivered }}</div>
+                        </li>
+                        {% endfor %}
+                    {% else %}
+                        <li class="text-gray-500">Kuryerlar topilmadi.</li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h4 class="font-semibold mb-4">Hududlar bo'yicha buyurtmalar</h4>
+                <ul class="space-y-2 text-sm text-gray-700">
+                    {% if region_stats %}
+                        {% for r in region_stats %}
+                        <li class="flex items-center justify-between">
+                            <div>{{ r.region }}</div>
+                            <div class="text-gray-500">{{ r.total_orders }} ta</div>
+                        </li>
+                        {% endfor %}
+                    {% else %}
+                        <li class="text-gray-500">Ma'lumot mavjud emas.</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+</div>
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const canvas = document.getElementById('weeklyOrdersChart');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        const labels = {{ weekly_labels_json|safe }};
+        const dataPoints = {{ weekly_data_json|safe }};
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Buyurtmalar',
+                        data: dataPoints,
+                        backgroundColor: 'rgba(59,130,246,0.9)'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: { x: { stacked: false }, y: { beginAtZero: true, title: { display: true, text: 'Soni' } } }
+            }
+        });
+    }
+</script>
+{% endblock %}
+
+{% endblock %}

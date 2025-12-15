@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center px-4 py-8">
+    <div class="w-full max-w-2xl">
+        <div class="bg-white shadow-lg rounded-xl overflow-hidden">
+            <div class="p-8 md:p-10 flex flex-col md:flex-row items-center md:items-start gap-6">
+                <div class="flex-shrink-0">
+                    <div class="w-28 h-28 rounded-full bg-blue-100 flex items-center justify-center text-4xl text-blue-600 font-bold">A</div>
+                </div>
+
+                <div class="flex-1">
+                    <h1 class="text-2xl font-bold text-gray-800">Admin bilan aloqa</h1>
+                    <p class="text-sm text-gray-500 mt-1">Agar muhim masala bo‘lsa, quyidagi orqali bog‘laning. Bu sahifa hozirgi paytda dev holatda — so‘rovlar va javoblar test uchun.</p>
+
+                    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="p-4 bg-gray-50 rounded">
+                            <div class="text-xs text-gray-400">Ism</div>
+                            <div class="font-medium text-gray-800">{{ admin.full_name }}</div>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded">
+                            <div class="text-xs text-gray-400">Telefon</div>
+                            <div class="font-medium text-gray-800">{{ admin.phone }}</div>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded">
+                            <div class="text-xs text-gray-400">Telegram</div>
+                            <div class="font-medium text-blue-600">{{ admin.telegram }}</div>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded">
+                            <div class="text-xs text-gray-400">Siz (kuryer)</div>
+                            <div class="font-medium text-gray-800">{% if courier %}{{ courier.full_name }} — {{ courier.phone }}{% else %}—{% endif %}</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex items-center gap-3">
+                        <a href="tel:{{ admin.phone }}" class="inline-block bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md">Qo'ng'iroq qilish</a>
+                        <a href="https://t.me/{{ admin.telegram|slice:'1:' }}" target="_blank" class="inline-block bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">Telegram orqali</a>
+                        <a href="/courier_panel/dashboard/" class="ml-auto text-sm text-gray-500 hover:underline">Ortga qaytish</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

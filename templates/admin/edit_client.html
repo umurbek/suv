@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="px-6 py-6 max-w-2xl">
+    <h1 class="text-2xl font-bold mb-4">Mijozni tahrirlash</h1>
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Ism</label>
+            <input name="full_name" value="{{ client.full_name }}" class="border p-2 w-full" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Telefon</label>
+            <input name="phone" value="{{ client.phone }}" class="border p-2 w-full" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Hudud</label>
+            <select name="region_id" class="border p-2 w-full">
+                <option value="">-- Hudud tanlang --</option>
+                {% for rid, display in regions_with_location %}
+                <option value="{{ rid }}" {% if client.region and client.region.id == rid %}selected{% endif %}>{{ display }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Izoh</label>
+            <textarea name="note" class="border p-2 w-full">{{ client.note }}</textarea>
+        </div>
+        <div class="flex gap-2">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Saqlash</button>
+            <a href="{% url 'orders_view' %}" class="bg-gray-200 px-4 py-2 rounded">Bekor qilish</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

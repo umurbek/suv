@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Kuryerlar</h1>
+
+    <!-- Couriers Table -->
+    <table class="table-auto w-full border-collapse border border-gray-300">
+        <thead>
+            <tr class="bg-gray-200">
+                <th class="border border-gray-300 p-2">Ism</th>
+                <th class="border border-gray-300 p-2">Telefon</th>
+                <th class="border border-gray-300 p-2">Hudud</th>
+                <th class="border border-gray-300 p-2">Status</th>
+                <th class="border border-gray-300 p-2">Amallar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in couriers %}
+            <tr>
+                <td class="border border-gray-300 p-2">{{ c.full_name }}</td>
+                <td class="border border-gray-300 p-2">{{ c.phone }}</td>
+                <td class="border border-gray-300 p-2">{{ c.region|default:'-' }}</td>
+                <td class="border border-gray-300 p-2 {% if c.is_active %}text-green-500{% else %}text-red-500{% endif %}">{{ c.status_label }}</td>
+                <td class="border border-gray-300 p-2 space-x-2">
+                    <a href="{% url 'edit_courier' courier_id=c.id %}" class="bg-blue-500 text-white px-2 py-1 rounded">Tahrirlash</a>
+                    <form method="post" action="{% url 'delete_courier' courier_id=c.id %}" style="display:inline">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-red-500 text-white px-2 py-1 rounded">O'chirish</button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="p-4 text-gray-500">Hozircha kuryerlar mavjud emas.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Add Courier Button -->
+    <a href="{% url 'add_courier' %}" class="bg-green-500 text-white px-4 py-2 mt-4 inline-block rounded">Yangi kuryer qo'shish</a>
+</div>
+{% endblock %}

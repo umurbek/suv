@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">Mijozlar profillari</h1>
+        <div class="flex items-center gap-2">
+            <input id="client-search" class="border p-2" placeholder="Qidiruv: ism yoki telefon" />
+            <button id="clear-client-search" class="bg-gray-200 px-3 py-2 rounded">Tozalash</button>
+        </div>
+    </div>
+
+    <div id="clients-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for c in clients %}
+        <div class="bg-white text-gray-800 p-5 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-2">{{ c.full_name }}</h3>
+            <div class="text-sm text-gray-600 mb-3">{{ c.address|default:'Manzil yo`q' }}</div>
+            <div class="grid grid-cols-2 gap-2 text-sm mb-4">
+                <div class="text-gray-500">Telefon</div><div class="text-right">{{ c.phone|default:'—' }}</div>
+                <div class="text-gray-500">So'ngi buyurtma</div><div class="text-right">{{ c.last_order_date|default:'—' }}</div>
+                <div class="text-gray-500">Baklashka balansi</div><div class="text-right">{{ c.bottle_balance|default:0 }}</div>
+                <div class="text-gray-500">Qarz</div><div class="text-right">{{ c.debt|default:0 }}</div>
+            </div>
+            <div class="flex justify-end space-x-2">
+                <a href="/admin_panel/edit_client/{{ c.id }}/" class="bg-blue-600 text-white px-4 py-2 rounded">Tahrirlash</a>
+                <form method="post" action="{% url 'delete_client' c.id %}" onsubmit="return confirm('Mijozni o\'chirishni xohlaysizmi? Bu amalni qaytarib bo\'lmaydi.');">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded">O'chirish</button>
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-gray-600">Mijozlar topilmadi.</div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<script>
+    const search = document.getElementById('client-search');
+    const clearBtn = document.getElementById('clear-client-search');
+    const cards = Array.from(document.querySelectorAll('#clients-grid > div'));
+
+    function matchCard(card, term) {
+        return card.textContent.toLowerCase().includes(term.toLowerCase());
+    }
+
+    search.addEventListener('input', () => {
+        const q = search.value.trim();
+        cards.forEach(c => c.style.display = q === '' || matchCard(c, q) ? '' : 'none');
+    });
+    clearBtn.addEventListener('click', () => { search.value = ''; search.dispatchEvent(new Event('input')); });
+</script>
+
+{% endblock %}

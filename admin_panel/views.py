@@ -1,0 +1,964 @@
+from django.shortcuts import render, redirect
+from django.http import JsonResponse
+from django.db.models import Count, Sum
+from suv_tashish_crm.models import Order, Client, Courier, Region
+from django.utils import timezone
+import random
+from decimal import Decimal
+import datetime
+import json
+import csv
+import os
+import re
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def admin_dashboard(request):
+    # Auth guard temporarily disabled; re-enable when ready
+    today_orders = Order.objects.filter(created_at__date=datetime.date.today()).count()
+    active_couriers = Courier.objects.filter(is_active=True).count()
+    total_clients = Client.objects.count()
+    debtors = Client.objects.filter(debt__gt=0).count()
+
+    top_debtors_qs = Client.objects.filter(debt__gt=0).order_by('-debt')[:5]
+    # prefer CSV names for clients that have generic 'Mijoz ...' placeholders
+    static_regions = []
+    try:
+        static_regions = read_csv_data()
+    except Exception:
+        static_regions = []
+
+    def _normalize_to_998(raw_digits: str):
+        if not raw_digits:
+            return None
+        d = ''.join(ch for ch in raw_digits if ch.isdigit())
+        if len(d) < 9:
+            return None
+        last9 = d[-9:]
+        std = '998' + last9
+        if len(std) == 12:
+            return std
+        return None
+
+    csv_phone_map = {}
+    csv_phone_by_last6 = {}
+    for r in static_regions:
+        p = (r.get('phone') or '').strip()
+        norm = _normalize_to_998(p)
+        if norm:
+            csv_phone_map[norm] = r.get('name')
+        digits_only = ''.join(ch for ch in p if ch.isdigit())
+        if len(digits_only) >= 6:
+            csv_phone_by_last6[digits_only[-6:]] = r.get('name')
+
+    top_debtors = []
+    for c in top_debtors_qs:
+        name = c.full_name or ''
+        # prefer CSV mapping when name is generic
+        use_name = name
+        if (not name) or name.strip().lower().startswith('mijoz'):
+            norm = _normalize_to_998(c.phone or '')
+            if norm and norm in csv_phone_map:
+                use_name = csv_phone_map.get(norm)
+            else:
+                # try last-6 fallback
+                digits_only = ''.join(ch for ch in (c.phone or '') if ch.isdigit())
+                if len(digits_only) >= 6 and digits_only[-6:] in csv_phone_by_last6:
+                    use_name = csv_phone_by_last6.get(digits_only[-6:])
+
+        top_debtors.append({'id': c.id, 'full_name': use_name, 'region': getattr(c.region, 'name', None), 'debt': getattr(c, 'debt', 0)})
+    # Build simple weekly orders stats for the chart (last 7 days)
+    weekly_labels = []
+    weekly_counts = []
+    try:
+        today = datetime.date.today()
+        for i in range(6, -1, -1):
+            day = today - datetime.timedelta(days=i)
+            weekly_labels.append(day.strftime('%a'))
+            weekly_counts.append(Order.objects.filter(created_at__date=day).count())
+    except Exception:
+        weekly_labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+        weekly_counts = [0,0,0,0,0,0,0]
+
+    # Top clients by number of orders (for dashboard sidebar)
+    try:
+        top_clients_qs = (
+            Order.objects.values('client__id', 'client__full_name')
+            .annotate(orders_count=Count('id'))
+            .order_by('-orders_count')[:5]
+        )
+        top_clients = [{'id': t['client__id'], 'full_name': t.get('client__full_name') or '—', 'orders_count': t.get('orders_count', 0)} for t in top_clients_qs]
+    except Exception:
+        top_clients = []
+    # Top couriers by delivered orders (dynamic)
+    try:
+        top_couriers_qs = (
+            Order.objects.filter(status='done')
+            .values('courier__id', 'courier__full_name')
+            .annotate(delivered=Count('id'))
+            .order_by('-delivered')[:5]
+        )
+        top_couriers = [{'id': t.get('courier__id'), 'full_name': t.get('courier__full_name') or '—', 'delivered': t.get('delivered', 0)} for t in top_couriers_qs]
+    except Exception:
+        top_couriers = []
+
+    # Orders per region (dynamic)
+    try:
+        region_stats_qs = (
+            Order.objects.values('client__region__name')
+            .annotate(total_orders=Count('id'))
+            .order_by('-total_orders')[:10]
+        )
+        region_stats = [{'region': t.get('client__region__name') or '—', 'total_orders': t.get('total_orders', 0)} for t in region_stats_qs]
+    except Exception:
+        region_stats = []
+
+    context = {
+        'today_orders': today_orders,
+        'active_couriers': active_couriers,
+        'total_clients': total_clients,
+        'debtors': debtors,
+        'top_debtors': top_debtors,
+        'top_clients': top_clients,
+        'top_couriers': top_couriers,
+        'region_stats': region_stats,
+        'weekly_labels_json': json.dumps(weekly_labels, ensure_ascii=False),
+        'weekly_data_json': json.dumps(weekly_counts),
+    }
+
+    return render(request, 'admin/admin_dashboard.html', context)
+
+
+def read_csv_data():
+    regions = []
+    csv_path = os.path.join(BASE_DIR, 'Volidam.csv')
+    with open(csv_path, 'r', encoding='utf-8') as file:
+        reader = csv.reader(file)
+        next(reader)  # Skip header
+        for row in reader:
+            regions.append({
+                'name': row[0],
+                'bottle': row[1],
+                'location': row[2],
+                'phone': row[3] if len(row) > 3 else ''
+            })
+    return regions
+
+
+def regions_view(request):
+    # Auth guard temporarily disabled; re-enable when ready
+    regions = read_csv_data()
+    # build a unique list of locations (hududlar) from CSV to populate selects
+    locations = []
+    seen = set()
+    for r in regions:
+        loc = (r.get('location') or '').strip()
+        if loc and loc not in seen:
+            seen.add(loc)
+            locations.append(loc)
+
+    return render(request, 'admin/regions.html', {'regions': regions, 'locations': locations})
+
+
+def add_region(request):
+    if request.method == 'POST':
+        # Auth guard temporarily disabled; re-enable when ready
+        try:
+            import json
+            payload = json.loads(request.body.decode('utf-8'))
+            name = (payload.get('name') or '').strip()
+            bottle = (payload.get('bottle') or '').strip()
+            location = (payload.get('location') or '').strip()
+            phone = (payload.get('phone') or '').strip()
+
+            if not name:
+                return JsonResponse({'status': 'error', 'message': "Hudud nomi kerak."})
+
+            # validate phone if provided
+            if phone:
+                if not re.match(r'^\+998\d{9}$', phone):
+                    return JsonResponse({'status': 'error', 'message': "Telefon formati noto'g'ri. Iltimos '+998XXXXXXXXX' formatida kiriting."})
+
+            csv_path = os.path.join(BASE_DIR, 'Volidam.csv')
+            file_exists = os.path.exists(csv_path)
+            # append new row, create file with header if missing
+            with open(csv_path, 'a', encoding='utf-8', newline='') as f:
+                writer = csv.writer(f)
+                if not file_exists:
+                    writer.writerow(['name', 'bottle', 'location', 'phone'])
+                writer.writerow([name, bottle, location, phone])
+
+            return JsonResponse({'status': 'success', 'region': {'name': name, 'bottle': bottle, 'location': location, 'phone': phone}})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+def update_region(request):
+    if request.method == 'POST':
+        # Auth guard temporarily disabled; re-enable when ready
+        # Expect JSON payload with old name and new fields
+        try:
+            import json
+            payload = json.loads(request.body.decode('utf-8'))
+            orig_name = payload.get('name') or payload.get('orig_name')
+            new_name = payload.get('newName') or payload.get('name_new') or payload.get('new_name')
+            new_bottle = payload.get('bottle')
+            new_location = payload.get('location') or payload.get('newLocation')
+            new_phone = payload.get('phone') or payload.get('newPhone')
+
+            # Server-side phone validation: if provided, must be +998 followed by 9 digits (total length 13)
+            if new_phone:
+                new_phone = new_phone.strip()
+                if not re.match(r'^\+998\d{9}$', new_phone):
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': "Telefon formati noto'g'ri. Iltimos '+998XXXXXXXXX' formatida kiriting."
+                    })
+
+            csv_path = os.path.join(BASE_DIR, 'Volidam.csv')
+            updated = False
+            rows = []
+            # Read existing CSV
+            with open(csv_path, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                headers = next(reader, None)
+                for row in reader:
+                    # row layout assumed: name, bottle, location, phone
+                    name = row[0] if len(row) > 0 else ''
+                    if orig_name and name == orig_name:
+                        # replace with new values (preserve header length)
+                        new_row = [
+                            new_name or name,
+                            new_bottle if new_bottle is not None else (row[1] if len(row) > 1 else ''),
+                            new_location if new_location is not None else (row[2] if len(row) > 2 else ''),
+                            new_phone if new_phone is not None else (row[3] if len(row) > 3 else ''),
+                        ]
+                        rows.append(new_row)
+                        updated = True
+                    else:
+                        rows.append(row)
+
+            if updated:
+                # Write back CSV (overwrite)
+                with open(csv_path, 'w', encoding='utf-8', newline='') as f:
+                    writer = csv.writer(f)
+                    if headers:
+                        writer.writerow(headers)
+                    for r in rows:
+                        writer.writerow(r)
+                return JsonResponse({'status': 'success'})
+            else:
+                return JsonResponse({'status': 'not_found'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+def delete_region(request):
+    if request.method == 'POST':
+        # Auth guard temporarily disabled; re-enable when ready
+        try:
+            import json
+            payload = json.loads(request.body.decode('utf-8'))
+            name = (payload.get('name') or '').strip()
+            if not name:
+                return JsonResponse({'status': 'error', 'message': "Hudud nomi kerak."})
+
+            csv_path = os.path.join(BASE_DIR, 'Volidam.csv')
+            if not os.path.exists(csv_path):
+                return JsonResponse({'status': 'not_found'})
+
+            rows = []
+            removed = False
+            with open(csv_path, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                headers = next(reader, None)
+                for row in reader:
+                    row_name = row[0] if len(row) > 0 else ''
+                    if row_name == name:
+                        removed = True
+                        continue
+                    rows.append(row)
+
+            if not removed:
+                return JsonResponse({'status': 'not_found'})
+
+            # write back file
+            with open(csv_path, 'w', encoding='utf-8', newline='') as f:
+                writer = csv.writer(f)
+                if headers:
+                    writer.writerow(headers)
+                for r in rows:
+                    writer.writerow(r)
+
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+def couriers_view(request):
+    # Auth guard temporarily disabled; re-enable when ready
+    # Provide dynamic list of couriers to the template
+    try:
+        qs = Courier.objects.select_related('region').all().order_by('full_name')
+        couriers = []
+        for c in qs:
+            status_label = 'Faol' if getattr(c, 'is_active', False) else 'Nofaol'
+            couriers.append({
+                'id': c.id,
+                'full_name': c.full_name,
+                'phone': c.phone,
+                'region': getattr(c.region, 'name', ''),
+                'is_active': getattr(c, 'is_active', False),
+                'status_label': status_label,
+            })
+    except Exception:
+        couriers = []
+
+    return render(request, 'admin/couriers_clean.html', {'couriers': couriers})
+
+
+def region_clients_api(request):
+    """Return JSON list of clients for a given region name.
+
+    Query param: ?name=<region name>
+    """
+    name = request.GET.get('name') or request.POST.get('name')
+    if not name:
+        return JsonResponse({'status': 'error', 'message': 'Region name required.'}, status=400)
+
+    try:
+        clients_qs = Client.objects.filter(region__name=name)
+    except Exception:
+        clients_qs = Client.objects.none()
+
+    clients = []
+    for c in clients_qs:
+        try:
+            lat = float(getattr(c, 'location_lat', 0) or 0)
+            lon = float(getattr(c, 'location_lon', 0) or 0)
+        except Exception:
+            lat = 0.0
+            lon = 0.0
+
+        clients.append({
+            'id': c.id,
+            'full_name': c.full_name,
+            'phone': c.phone,
+            'lat': lat,
+            'lon': lon,
+            'note': c.note or '',
+        })
+
+    return JsonResponse({'status': 'ok', 'clients': clients})
+
+
+def clients_view(request):
+    # Auth guard temporarily disabled; re-enable when ready
+    # Provide dynamic client profiles to template
+    try:
+        static_regions = read_csv_data()
+    except Exception:
+        static_regions = []
+    static_map = {r.get('name'): r.get('location') for r in static_regions}
+    clients_qs = Client.objects.select_related('region').all()
+    clients = []
+    for c in clients_qs:
+        address = ''
+        if c.region:
+            address = static_map.get(c.region.name) or getattr(c.region, 'name', '')
+        last_order = Order.objects.filter(client=c).order_by('-created_at').first()
+        last_order_date = ''
+        if last_order and getattr(last_order, 'created_at', None):
+            try:
+                last_order_date = last_order.created_at.strftime('%Y-%m-%d %H:%M')
+            except Exception:
+                last_order_date = str(last_order.created_at)
+        clients.append({
+            'id': c.id,
+            'full_name': c.full_name,
+            'phone': c.phone,
+            'address': address,
+            'debt': getattr(c, 'debt', 0),
+            'bottle_balance': getattr(c, 'bottle_balance', 0),
+            'last_order_date': last_order_date,
+        })
+    return render(request, 'admin/clients.html', {'clients': clients})
+
+
+def notifications_api(request):
+    """Return unseen notifications for admin panel (JSON)."""
+    try:
+        from suv_tashish_crm.models import Notification
+        qs = Notification.objects.filter(seen=False).order_by('-created_at')[:50]
+        data = []
+        for n in qs:
+            data.append({'id': n.id, 'title': n.title, 'message': n.message, 'created_at': n.created_at.isoformat()})
+        return JsonResponse({'status': 'ok', 'notifications': data})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+def orders_view(request):
+    # Auth guard temporarily disabled; re-enable when ready
+
+    # pop any flash message set by other views (edit/delete)
+    flash_message = request.session.pop('flash_message', None)
+    flash_type = request.session.pop('flash_type', None)
+    # Fetch recent orders with related client/courier/region
+    orders_qs = Order.objects.select_related('client__region', 'courier').order_by('-created_at')[:50]
+
+    orders = []
+    for o in orders_qs:
+        # determine address: prefer CSV location for the client's region if available
+        o_address = ''
+        if o.client and o.client.region:
+            # static_location_map may not be defined yet; try to read CSV and map
+            try:
+                static_regions_temp = read_csv_data()
+                static_map_temp = { r.get('name'): r.get('location') for r in static_regions_temp }
+                o_address = static_map_temp.get(o.client.region.name) or getattr(o.client.region, 'name', '')
+            except Exception:
+                o_address = getattr(o.client.region, 'name', '')
+
+        # map internal status to Uzbek label and CSS class
+        if o.status == 'done':
+            s_label = 'Yetkazildi'
+            s_class = 'text-green-600 bg-green-100'
+        elif o.status in ('delivering', 'assigned'):
+            s_label = 'Jarayonda'
+            s_class = 'text-yellow-600 bg-yellow-100'
+        else:
+            s_label = 'Berilmadi'
+            s_class = 'text-red-600 bg-red-100'
+
+        orders.append({
+            'order_id': o.id,
+            'order_label': f"#{o.id}",
+            'client_id': o.client.id if o.client else None,
+            'user_id': f"u_{o.client.id}",
+            'client_name': o.client.full_name,
+            'phone': o.client.phone,
+            'address': o_address,
+            'comment': o.client.note or o.client.last_order,
+            'status': o.status,
+            'status_label': s_label,
+            'status_class': s_class,
+            'courier': o.courier.full_name if o.courier else None,
+            'bottles': o.bottle_count,
+            'amount': int(o.debt_change) if getattr(o, 'debt_change', None) is not None else None,
+        })
+
+    # Top clients by number of orders
+    top_clients = (
+        Order.objects.values('client__id', 'client__full_name', 'client__phone')
+        .annotate(orders_count=Count('id'))
+        .order_by('-orders_count')[:10]
+    )
+
+    # Top couriers by delivered orders
+    top_couriers = (
+        Order.objects.filter(status='done')
+        .values('courier__id', 'courier__full_name')
+        .annotate(delivered=Count('id'))
+        .order_by('-delivered')[:10]
+    )
+
+    # Orders per region
+    region_stats = (
+        Order.objects.values('client__region__id', 'client__region__name')
+        .annotate(total_orders=Count('id'))
+        .order_by('-total_orders')
+    )
+
+    # include static regions parsed from CSV so templates can show static region info if needed
+    static_regions = read_csv_data()
+
+    # build a mapping from region name -> location (CSV 'location' column)
+    static_location_map = { r.get('name'): r.get('location') for r in static_regions }
+
+    # Also provide all client profiles so the Orders page can show "all profiles"
+    clients_qs = Client.objects.select_related('region').all()
+
+    profiles = []
+    for c in clients_qs:
+        # prefer CSV location for region if available, otherwise use Region.name
+        address = ''
+        if c.region:
+            address = static_location_map.get(c.region.name) or getattr(c.region, 'name', '')
+
+        # determine last order status for this client
+        last_order = Order.objects.filter(client=c).order_by('-created_at').first()
+        if last_order:
+            st = last_order.status
+            if st == 'done':
+                p_label = 'Yetkazildi'
+                p_class = 'text-green-600 bg-green-100'
+            elif st in ('delivering', 'assigned'):
+                p_label = 'Jarayonda'
+                p_class = 'text-yellow-600 bg-yellow-100'
+            else:
+                p_label = 'Berilmadi'
+                p_class = 'text-red-600 bg-red-100'
+        else:
+            p_label = ''
+            p_class = 'text-gray-600'
+
+        profiles.append({
+            'client_id': c.id,
+            'order_label': '',
+            'user_id': f"u_{c.id}",
+            'client_name': c.full_name,
+            'phone': c.phone,
+            'address': address,
+            'comment': c.note or '',
+            'debt': getattr(c, 'debt', Decimal('0.00')) or Decimal('0.00'),
+            'status_label': p_label,
+            'status_class': p_class,
+            'status': '',
+            'courier': None,
+            'bottles': getattr(c, 'bottle_balance', 0),
+        })
+
+    context = {
+        'orders': orders,
+        'profiles': profiles,
+        'static_regions': static_regions,
+        'regions': Region.objects.order_by('name'),
+        'flash_message': flash_message,
+        'flash_type': flash_type,
+        'top_clients': top_clients,
+        'top_couriers': top_couriers,
+        'region_stats': region_stats,
+    }
+    return render(request, 'admin/orders.html', context)
+
+
+def seed_region_orders(request):
+    """Create one static order per entry in Volidam.csv.
+
+    This view must be called with POST (token-protected). For each CSV row:
+    - ensure a Region exists
+    - create or get a Client for that region (unique phone generated if missing)
+    - create an Order for that client
+    """
+    if request.session.get('role') != 'admin':
+        # require login as admin
+        return redirect('/login/')
+
+    if request.method != 'POST':
+        return redirect('orders_view')
+
+    static_regions = read_csv_data()
+    # Auth guard temporarily disabled; re-enable when ready
+    created = 0
+    for idx, r in enumerate(static_regions):
+        region_name = r.get('name') or f'Region {idx}'
+        region_obj, _ = Region.objects.get_or_create(name=region_name)
+
+        # Try to use CSV phone if provided and unique, otherwise create synthetic phone
+        phone = r.get('phone') or ''
+        if phone:
+            # normalize phone length
+            phone = phone.strip()
+            if len(phone) > 15:
+                phone = phone[:15]
+
+        if not phone or Client.objects.filter(phone=phone).exists():
+            # generate unique phone-like identifier
+            phone = f"r{idx}_{int(timezone.now().timestamp())}"[:15]
+            # ensure uniqueness by appending idx if necessary
+            while Client.objects.filter(phone=phone).exists():
+                phone = f"{phone}_{random.randint(0,999)}"[:15]
+
+        # Use CSV name when available, otherwise a neutral client name
+        csv_name = (r.get('name') or '').strip()
+        if csv_name:
+            client_name = csv_name
+        else:
+            client_name = f"Mijoz {idx + 1}"
+
+        client, created_client = Client.objects.get_or_create(phone=phone, defaults={
+            'full_name': client_name,
+            'region': region_obj,
+            'location_lat': 0.0,
+            'location_lon': 0.0,
+        })
+
+        # If client existed but has a generic 'Mijoz N' name and CSV provides a better name, update it
+        if not created_client and csv_name and (client.full_name.startswith('Mijoz') or client.full_name.strip() == ''):
+            client.full_name = csv_name
+            client.save()
+
+        # assign a random debt for some clients (30% chance)
+        if created_client:
+            if random.random() < 0.3:
+                debt_amount = Decimal(str(round(random.uniform(10, 300), 2)))
+                client.debt = debt_amount
+            else:
+                client.debt = Decimal('0.00')
+            client.save()
+
+        # create a static order for the client (1-5 bottles randomly)
+        bottles = random.randint(1, 5)
+        Order.objects.create(
+            client=client,
+            courier=None,
+            bottle_count=bottles,
+            client_note=f"Static seed order for {region_name}",
+            status='done',
+        )
+
+        # update client stats
+        client.last_order = timezone.now()
+        client.bottle_balance = getattr(client, 'bottle_balance', 0) + 0
+        client.save()
+        created += 1
+
+    # Redirect back with a very small message via session (optional)
+    request.session['seeded_regions'] = created
+    return redirect('orders_view')
+
+
+def edit_client(request, client_id):
+    try:
+        client = Client.objects.get(pk=client_id)
+    except Client.DoesNotExist:
+        return redirect('orders_view')
+
+    if request.method == 'POST':
+        client.full_name = request.POST.get('full_name', client.full_name)
+        phone = request.POST.get('phone', client.phone)
+        if phone and phone != client.phone:
+            # ensure unique phone - basic check
+            if not Client.objects.filter(phone=phone).exclude(pk=client.pk).exists():
+                client.phone = phone
+        region_id = request.POST.get('region_id', '').strip()
+        if region_id:
+            try:
+                region_obj = Region.objects.get(pk=int(region_id))
+                client.region = region_obj
+            except (Region.DoesNotExist, ValueError):
+                pass
+        client.note = request.POST.get('note', client.note)
+        client.save()
+        # set flash message to show on orders page
+        request.session['flash_message'] = 'Mijoz muvaffaqiyatli tahrirlandi.'
+        request.session['flash_type'] = 'success'
+        return redirect('orders_view')
+
+    # Prepare regions list with CSV 'location' as display text when available
+    static_regions = read_csv_data()
+    static_map = {r.get('name'): r.get('location') for r in static_regions}
+    regions_qs = Region.objects.order_by('name')
+    regions_with_location = [(r.id, static_map.get(r.name) or r.name) for r in regions_qs]
+    return render(request, 'admin/edit_client.html', {'client': client, 'regions_with_location': regions_with_location})
+
+
+def delete_client(request, client_id):
+    if request.method == 'POST':
+        try:
+            client = Client.objects.get(pk=client_id)
+            client.delete()
+        except Client.DoesNotExist:
+            pass
+    # set flash message for deletion
+    request.session['flash_message'] = 'Mijoz o`chirildi.'
+    request.session['flash_type'] = 'danger'
+    return redirect('orders_view')
+
+
+def add_courier(request):
+    # Add a new courier via simple form
+    if request.method == 'POST':
+        full_name = request.POST.get('full_name', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        region_id = request.POST.get('region_id', '').strip()
+        is_active = True if request.POST.get('is_active') == 'on' else False
+
+        region_obj = None
+        if region_id:
+            try:
+                region_obj = Region.objects.get(pk=int(region_id))
+            except Exception:
+                region_obj = None
+
+        if full_name and phone:
+            Courier.objects.create(full_name=full_name, phone=phone, region=region_obj, is_active=is_active)
+            request.session['flash_message'] = 'Kuryer qo\'shildi.'
+            request.session['flash_type'] = 'success'
+            return redirect('couriers_view')
+
+    regions = Region.objects.order_by('name')
+    return render(request, 'admin/add_edit_courier_clean.html', {'regions': regions, 'action': 'add'})
+
+
+def edit_courier(request, courier_id):
+    try:
+        courier = Courier.objects.get(pk=courier_id)
+    except Courier.DoesNotExist:
+        request.session['flash_message'] = 'Kuryer topilmadi.'
+        request.session['flash_type'] = 'danger'
+        return redirect('couriers_view')
+
+    if request.method == 'POST':
+        courier.full_name = request.POST.get('full_name', courier.full_name).strip()
+        phone = request.POST.get('phone', courier.phone).strip()
+        if phone and phone != courier.phone:
+            # ensure unique phone among couriers (best effort)
+            if not Courier.objects.filter(phone=phone).exclude(pk=courier.pk).exists():
+                courier.phone = phone
+
+        region_id = request.POST.get('region_id', '').strip()
+        if region_id:
+            try:
+                courier.region = Region.objects.get(pk=int(region_id))
+            except Exception:
+                pass
+
+        courier.is_active = True if request.POST.get('is_active') == 'on' else False
+        courier.save()
+
+        request.session['flash_message'] = 'Kuryer muvaffaqiyatli tahrirlandi.'
+        request.session['flash_type'] = 'success'
+        return redirect('couriers_view')
+
+    regions = Region.objects.order_by('name')
+    return render(request, 'admin/add_edit_courier_clean.html', {'regions': regions, 'courier': courier, 'action': 'edit'})
+
+
+def delete_courier(request, courier_id):
+    if request.method == 'POST':
+        try:
+            courier = Courier.objects.get(pk=courier_id)
+            courier.delete()
+            request.session['flash_message'] = 'Kuryer o\'chirildi.'
+            request.session['flash_type'] = 'danger'
+        except Courier.DoesNotExist:
+            request.session['flash_message'] = 'Kuryer topilmadi.'
+            request.session['flash_type'] = 'danger'
+    return redirect('couriers_view')
+
+
+def reports_view(request):
+    # Financial report: static monthly revenue for 12 months (will become dynamic later)
+    import json
+    # Static months (Uzbek short names)
+    labels = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']
+    # Static sample revenue values (in so'm or currency units)
+    data = [1200000, 1500000, 1100000, 1700000, 2000000, 1800000, 1600000, 1900000, 2100000, 2300000, 2200000, 2400000]
+
+    context = {
+        'revenue_labels': labels,
+        'revenue_data': data,
+        'revenue_labels_json': json.dumps(labels, ensure_ascii=False),
+        'revenue_data_json': json.dumps(data),
+        'unit_price': None,
+    }
+    return render(request, 'admin/reports.html', context)
+
+
+def debtors_view(request):
+    """Show clients with outstanding debt as profile cards.
+
+    This view lists `Client` records with `debt > 0`. For each client we include:
+    - last order id (if any)
+    - user id label
+    - phone
+    - courier who served last order (if any)
+    - debt amount
+    - status (derived from last order)
+    - days overdue (based on client's last_order timestamp if available)
+    """
+    from django.utils import timezone
+
+    title = 'Qarzdorlar'
+    clients_qs = Client.objects.filter(debt__gt=0).select_related('region')
+    debtors = []
+    now = timezone.now()
+    # load static CSV mapping (phone -> csv name) to prefer CSV name when available
+    try:
+        static_regions = read_csv_data()
+    except Exception:
+        static_regions = []
+
+    # build mapping from CSV region name -> CSV location (address)
+    static_location_map = { r.get('name'): r.get('location') for r in static_regions }
+
+    def _normalize_to_998(raw_digits: str):
+        """Normalize any digits string to the form '998' + 9 local digits (12 digits total).
+        Returns the normalized digits (without '+') or None if not possible.
+        Strategy: take the last 9 digits as local number and prepend '998'.
+        """
+        if not raw_digits:
+            return None
+        d = ''.join(ch for ch in raw_digits if ch.isdigit())
+        if len(d) < 9:
+            return None
+        last9 = d[-9:]
+        std = '998' + last9
+        if len(std) == 12:
+            return std
+        return None
+
+    csv_phone_map = {}
+    for r in static_regions:
+        p = (r.get('phone') or '').strip()
+        norm = _normalize_to_998(p)
+        if norm:
+            csv_phone_map[norm] = r.get('name')
+
+    # build a fallback mapping by last-6-digits to catch phones with different formatting
+    csv_phone_by_last6 = {}
+    for r in static_regions:
+        p = ''.join(ch for ch in (r.get('phone') or '') if ch.isdigit())
+        if len(p) >= 6:
+            csv_phone_by_last6[p[-6:]] = r.get('name')
+
+    # Static couriers (temporary). Will be dynamic later.
+    static_couriers = [
+        {'name': 'Oybek Kurye', 'phone': '+998901112233'},
+        {'name': 'Aziz Kurye', 'phone': '+998902223344'},
+        {'name': 'Dilorom Kurye', 'phone': '+998903334455'},
+    ]
+
+    for c in clients_qs:
+        last_order = Order.objects.filter(client=c).order_by('-created_at').first()
+        order_id = last_order.id if last_order else None
+        # Determine courier info: prefer order.courier if present, otherwise pick a static courier
+        if last_order and last_order.courier:
+            courier_name = last_order.courier.full_name
+            courier_phone = getattr(last_order.courier, 'phone', '-')
+        else:
+            # pick a static courier deterministically by client id
+            sc = static_couriers[c.id % len(static_couriers)]
+            courier_name = sc['name']
+            courier_phone = sc['phone']
+        # determine status label
+        if last_order:
+            st = last_order.status
+            if st == 'done':
+                s_label = 'Yetkazildi'
+            elif st in ('delivering', 'assigned'):
+                s_label = 'Jarayonda'
+            else:
+                s_label = 'Berilmadi'
+        else:
+            s_label = ''
+
+        # days overdue: compare now and client's last_order
+        days_overdue = 0
+        if getattr(c, 'last_order', None):
+            try:
+                delta = now.date() - c.last_order.date()
+                days_overdue = delta.days
+            except Exception:
+                days_overdue = 0
+
+        # Format phone: normalize to +998XXXXXXXXX (13 chars including '+') when possible
+        raw_phone = (c.phone or '')
+        norm = _normalize_to_998(raw_phone)
+        if norm:
+            formatted_phone = '+' + norm
+        else:
+            # fallback: strip non-digits and show what's available
+            digits = ''.join(ch for ch in raw_phone if ch.isdigit())
+            formatted_phone = digits or raw_phone
+
+        # If CSV has a name for this phone, prefer it. Also try last-6-digits fallback.
+        csv_name = None
+        if norm and norm in csv_phone_map:
+            csv_name = csv_phone_map.get(norm)
+        else:
+            # try fallback by last-6-digits
+            digits_only = ''.join(ch for ch in raw_phone if ch.isdigit())
+            if len(digits_only) >= 6:
+                last6 = digits_only[-6:]
+                if last6 in csv_phone_by_last6:
+                    csv_name = csv_phone_by_last6.get(last6)
+
+        # If we found a better name in CSV and client currently has a generic 'Mijoz N' name, update DB
+        try:
+            if csv_name and (c.full_name.startswith('Mijoz') or c.full_name.strip() == ''):
+                c.full_name = csv_name
+                c.save()
+        except Exception:
+            # If save fails for any reason, continue without interrupting the listing
+            pass
+
+        # determine address: prefer CSV location for client's region name
+        address = ''
+        if c.region:
+            address = static_location_map.get(c.region.name) or getattr(c.region, 'name', '')
+
+        # last order date (when they took the last order)
+        last_order_date = ''
+        if last_order and getattr(last_order, 'created_at', None):
+            try:
+                last_order_date = last_order.created_at.strftime('%Y-%m-%d %H:%M')
+            except Exception:
+                last_order_date = str(last_order.created_at)
+
+        debtors.append({
+            'client_id': c.id,
+            'order_id': order_id,
+            'user_id': f"u_{c.id}",
+            'name': csv_name or c.full_name,
+            'phone': formatted_phone,
+                'courier': courier_name,
+                'courier_phone': courier_phone,
+            'debt': getattr(c, 'debt', 0),
+            'status_label': s_label,
+            'days_overdue': days_overdue,
+            'address': address,
+            'last_order_date': last_order_date,
+        })
+
+    # Pop any flash message set by previous actions (e.g., mark_debtor_paid)
+    flash_message = request.session.pop('flash_message', None)
+    flash_type = request.session.pop('flash_type', None)
+    return render(request, 'admin/debtors.html', {'debtors': debtors, 'title': title, 'flash_message': flash_message, 'flash_type': flash_type})
+
+
+def mark_debtor_paid(request, client_id):
+    if request.method == 'POST':
+        try:
+            client = Client.objects.get(pk=client_id)
+            client.debt = 0
+            client.save()
+            request.session['flash_message'] = f"{client.full_name} - qarz to'landi."
+            request.session['flash_type'] = 'success'
+        except Client.DoesNotExist:
+            request.session['flash_message'] = 'Mijoz topilmadi.'
+            request.session['flash_type'] = 'danger'
+    return redirect('debtors_view')
+
+
+def inactive_clients_view(request):
+    """List clients who have not had an order for 10 or more days."""
+    # Return static sample data for testing: clients with no orders in last 10+ days
+    cutoff_days = 10
+    inactive = [
+        {
+            'client_id': 101,
+            'name': 'Rustam Ismoilov',
+            'phone': '+998901112233',
+            'last_order_date': '2025-11-28',
+            'days_since': 14,
+        },
+        {
+            'client_id': 102,
+            'name': 'Gulnora Abdullaeva',
+            'phone': '+998902223344',
+            'last_order_date': '2025-11-29',
+            'days_since': 13,
+        },
+        {
+            'client_id': 103,
+            'name': 'Javlon Mirzaev',
+            'phone': '+998903334455',
+            'last_order_date': '2025-11-25',
+            'days_since': 17,
+        },
+    ]
+
+    return render(request, 'admin/inactive_clients.html', {'clients': inactive, 'cutoff_days': cutoff_days})

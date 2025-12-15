@@ -1,0 +1,367 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="max-w-md mx-auto px-4 pb-24">
+    <div class="flex items-center justify-between mb-4 pt-4">
+        <div class="flex items-center space-x-3">
+            <img src="/static/img/logo.png" alt="logo" class="h-8 w-8 object-contain" onerror="this.style.display='none'" />
+            <h2 class="text-xl font-bold">Mening Dashboard</h2>
+        </div>
+        <button id="quick-order-btn" class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-500 text-sm">Buyurtma berish</button>
+    </div>
+    <div class="text-xs text-gray-500 mb-3">Customer ID: {% if client and client.customer_id %}{{ client.customer_id }}{% else %}—{% endif %}</div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Baklashka balansi</p>
+                        <p class="text-2xl md:text-3xl font-extrabold text-blue-600">{{ metrics.bottle_balance|default:0 }}</p>
+                        <p class="text-xs text-gray-400">Hozirgi balans</p>
+                    </div>
+                    <div class="text-3xl text-blue-400">🧴</div>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Qarz</p>
+                        <p class="text-2xl md:text-3xl font-extrabold text-red-500">{{ metrics.debt|default:0 }}</p>
+                        <p class="text-xs text-gray-400">Agar bo'lsa to'lang</p>
+                    </div>
+                    <div class="text-3xl text-red-400">💳</div>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Oxirgi buyurtmalar</p>
+                        <p class="text-2xl md:text-3xl font-extrabold text-gray-900">{{ recent_orders|length }}</p>
+                        <p class="text-xs text-gray-400">So'nggi 10 ta</p>
+                    </div>
+                    <div class="text-3xl text-green-400">🧾</div>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Holat</p>
+                        <p class="text-2xl md:text-3xl font-extrabold text-indigo-600">Aktiv</p>
+                        <p class="text-xs text-gray-400">Profil holati</p>
+                    </div>
+                    <div class="text-3xl text-indigo-400">✅</div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-semibold mb-4">So'nggi Buyurtmalar</h3>
+                <div class="space-y-3">
+                    {% for o in recent_orders %}
+                    <div class="flex items-center justify-between p-3 border rounded">
+                        <div>
+                            <div class="font-medium">#{{ o.id }}</div>
+                            <div class="text-xs text-gray-400">{{ o.created_at }}</div>
+                            {% if o.note %}
+                            <div class="text-xs text-gray-600 mt-1">{{ o.note }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="text-sm text-gray-700">{{ o.bottles }} ta — {{ o.status }}</div>
+                    </div>
+                    {% empty %}
+                    <div class="text-gray-500">Buyurtma topilmadi.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Weekly chart removed for client view (admin only) -->
+
+        </div>
+
+        <aside class="space-y-6">
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h4 class="font-semibold mb-4">Profil</h4>
+                <div class="space-y-2">
+                    <div class="text-sm text-gray-700">Ism: <strong>{{ client.first_name }} {{ client.last_name }}</strong></div>
+                    <div class="text-sm text-gray-700">Telefon: <strong>{{ client.phone }}</strong></div>
+                    <div class="text-sm text-gray-700">Manzil: <strong>{% if client.region %}{{ client.region.name }}{% endif %}</strong></div>
+                </div>
+                <div class="mt-4">
+                    <a href="/client_panel/profile/" class="inline-block px-3 py-2 bg-blue-500 text-white rounded">Profilni tahrirlash</a>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h4 class="font-semibold mb-4">Yordam</h4>
+                <p class="text-sm text-gray-500">Savol yoki texnik muammo bo'lsa, biz bilan bog'laning.</p>
+                <div class="mt-3"><a href="/client_panel/contact_admin/" class="text-blue-600">Admin bilan bog'lanish</a></div>
+            </div>
+        </aside>
+    </div>
+
+</div>
+
+{# expose default client values and regions to JS #}
+<script>
+const DEFAULT_CLIENT_NAME = "{{ client.first_name|default:''|escapejs }}";
+const DEFAULT_CLIENT_PHONE = "{{ client.phone|default:''|escapejs }}";
+const REGIONS = {{ regions_json|safe }};
+</script>
+
+<!-- categories + search -->
+<div class="px-4">
+    <div class="flex items-center space-x-3 overflow-x-auto pb-3">
+        <div class="flex-none text-center">
+            <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">🍶</div>
+            <div class="text-xs mt-1">Mineral</div>
+        </div>
+        <div class="flex-none text-center">
+            <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">🧊</div>
+            <div class="text-xs mt-1">Chilled</div>
+        </div>
+        <div class="flex-none text-center">
+            <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">🥤</div>
+            <div class="text-xs mt-1">Soft</div>
+        </div>
+        <div class="flex-none text-center">
+            <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">💧</div>
+            <div class="text-xs mt-1">Detox</div>
+        </div>
+    </div>
+
+    <div class="relative mb-4">
+        <input id="search" type="search" placeholder="Qidirish..." class="w-full border rounded-xl p-3 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-200">
+        <svg class="w-5 h-5 text-gray-400 absolute left-3 top-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M16.65 16.65A7 7 0 1 0 6 6a7 7 0 0 0 10.65 10.65z"/></svg>
+    </div>
+</div>
+
+<!-- product grid -->
+<div id="products" class="px-4 grid grid-cols-2 gap-3">
+    <!-- sample cards -->
+    <div class="bg-white rounded-xl p-3 shadow hover:shadow-lg transition" data-name="Mineral water" data-price="5000" data-img="/static/img/water-bottle.png">
+        <div class="card-img mb-3"><img src="/static/img/water-bottle.png" alt="Mineral" class="h-20 object-contain" onerror="this.style.display='none'"></div>
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="font-semibold">Mineral water</div>
+                <div class="text-xs text-gray-500">5000 UZS</div>
+            </div>
+            <button class="open-product bg-blue-500 text-white px-3 py-1 rounded">Buy</button>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl p-3 shadow hover:shadow-lg transition" data-name="Chilled water" data-price="7000" data-img="/static/img/chilled.png">
+        <div class="card-img mb-3"><img src="/static/img/chilled.png" alt="Chilled" class="h-20 object-contain" onerror="this.style.display='none'"></div>
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="font-semibold">Chilled water</div>
+                <div class="text-xs text-gray-500">7000 UZS</div>
+            </div>
+            <button class="open-product bg-blue-500 text-white px-3 py-1 rounded">Buy</button>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl p-3 shadow hover:shadow-lg transition" data-name="Detox water" data-price="6500" data-img="/static/img/detox.png">
+        <div class="card-img mb-3"><img src="/static/img/detox.png" alt="Detox" class="h-20 object-contain" onerror="this.style.display='none'"></div>
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="font-semibold">Detox water</div>
+                <div class="text-xs text-gray-500">6500 UZS</div>
+            </div>
+            <button class="open-product bg-blue-500 text-white px-3 py-1 rounded">Buy</button>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl p-3 shadow hover:shadow-lg transition" data-name="Soft drinks" data-price="8000" data-img="/static/img/soft.png">
+        <div class="card-img mb-3"><img src="/static/img/soft.png" alt="Soft" class="h-20 object-contain" onerror="this.style.display='none'"></div>
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="font-semibold">Soft drinks</div>
+                <div class="text-xs text-gray-500">8000 UZS</div>
+            </div>
+            <button class="open-product bg-blue-500 text-white px-3 py-1 rounded">Buy</button>
+        </div>
+    </div>
+</div>
+
+<div class="h-24"></div>
+
+<!-- bottom nav -->
+<div class="fixed inset-x-0 bottom-0 bg-white border-t p-3">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+        <a href="/client_panel/dashboard/" class="flex flex-col items-center text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M13 5v6h6"/></svg>
+            <span class="text-xs">Home</span>
+        </a>
+        <a href="/client_panel/orders/" class="flex flex-col items-center text-blue-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4"/></svg>
+            <span class="text-xs">Cart</span>
+        </a>
+        <a href="/client_panel/profile/" class="flex flex-col items-center text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0 1 12 15c2.5 0 4.847.632 6.879 1.804M15 11a3 3 0 1 0-6 0 3 3 0 0 0 6 0z"/></svg>
+            <span class="text-xs">Profile</span>
+        </a>
+    </div>
+</div>
+{% block extra_scripts %}
+<script>
+// Ensure product modal and handlers are initialized after DOM is ready
+document.addEventListener('DOMContentLoaded', function(){
+    // product modal setup and event delegation
+    const UNIT_PRICE = 12000; // fixed price per bottle in UZS
+
+    // create modal element if not exists
+    let modal = document.getElementById('product-modal');
+    if (!modal){
+        modal = document.createElement('div');
+        modal.id = 'product-modal';
+        // ensure modal overlays bottom nav and FAB (high z-index) and places content above nav
+        modal.className = 'fixed inset-0 bg-black/40 hidden items-end sm:items-center justify-center z-50';
+        modal.innerHTML = `
+            <div class="w-full max-w-md bg-white rounded-t-2xl p-4 pb-24 sm:pb-8 shadow-2xl">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div id="pm-name" class="font-semibold text-lg">Product</div>
+                        <div id="pm-price" class="text-sm text-gray-500">Price</div>
+                    </div>
+                    <button id="pm-close" class="text-gray-500">✕</button>
+                </div>
+                <div class="mt-3 flex items-center space-x-3">
+                    <img id="pm-img" src="" class="w-28 h-28 bg-blue-50 rounded-lg object-contain" />
+                    <div class="flex-1">
+                        <div class="text-sm text-gray-600 mb-2">Nechta bouteille kerak?</div>
+                        <div class="flex items-center space-x-2 mb-3">
+                            <button id="pm-decr" class="px-3 py-1 border rounded">-</button>
+                            <input id="pm-qty" type="number" min="1" step="1" value="1" class="w-24 text-center p-1 border rounded" />
+                            <button id="pm-incr" class="px-3 py-1 border rounded">+</button>
+                        </div>
+                        <div class="text-sm text-gray-700">Narx: <span id="pm-unit-price">0</span> UZS / ta</div>
+                        <div class="text-lg font-semibold mt-2">Jami: <span id="pm-total-price">0</span> UZS</div>
+                        <div class="mt-3">
+                            <label for="pm-message" class="text-sm text-gray-600">Qo'shimcha xabar (masalan: sizga qulay vaqt yoki eslatma)</label>
+                            <textarea id="pm-message" rows="3" class="w-full mt-1 p-2 border rounded" placeholder="Masalan: Ertalab 9-10 orasida yetkazib bering"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button id="pm-order" class="w-full bg-blue-600 text-white py-3 rounded-lg">Buyurtma tasdiqlash</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);                                                                                                                                                                                                    
+    }
+
+    function formatNumber(x){ return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00A0"); }
+
+    function updatePriceDisplays(){                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+        const qty = Math.max(1, parseInt(document.getElementById('pm-qty').value||1));                                                                                                                                                                                                                                                                  
+        const unit = UNIT_PRICE;
+        const total = qty * unit;                                                                                                                   
+        document.getElementById('pm-unit-price').innerText = formatNumber(unit);
+        document.getElementById('pm-total-price').innerText = formatNumber(total);                                                                                                                                                                                                                                                                                                          
+    }
+
+    // small toast helper: shows a transient message that auto-hides after `ms` milliseconds
+    function showToast(msg, ms){
+        try{
+            ms = ms || 2000;
+            const t = document.createElement('div');
+            t.className = 'fixed top-6 left-1/2 -translate-x-1/2 bg-black text-white px-4 py-2 rounded shadow opacity-0 transition-opacity';
+            t.style.zIndex = 9999;
+            t.innerText = msg;
+            document.body.appendChild(t);
+            // force reflow then fade in
+            void t.offsetWidth; t.style.opacity = '0.95';
+            setTimeout(()=>{ t.style.opacity = '0'; setTimeout(()=> t.remove(), 300); }, ms);
+        }catch(e){ console.error('toast error', e); }
+    }
+                                                                                                                                            
+    function openModalForCard(card){
+        const name = card.dataset.name || '';
+        const price = card.dataset.price || '';
+        const img = card.dataset.img || '';
+        document.getElementById('pm-name').innerText = name;
+        document.getElementById('pm-price').innerText = formatNumber(UNIT_PRICE) + ' UZS';
+        const imgel = document.getElementById('pm-img'); imgel.src = img; imgel.onerror = function(){ this.style.display='none'; };
+        document.getElementById('pm-qty').value = '1';
+        updatePriceDisplays();
+        modal.classList.remove('hidden'); modal.classList.add('flex');
+    }
+
+    // delegate clicks for product open buttons and quick order
+    document.body.addEventListener('click', function(ev){
+        const btn = ev.target.closest('.open-product');
+        if (btn){
+            const card = btn.closest('[data-name]');
+            if (card) openModalForCard(card);
+            return;
+        }
+        const quick = ev.target.closest('#quick-order-btn') || ev.target.closest('#mobile-order-btn') || ev.target.closest('#fab-order-btn');
+        if (quick){
+            const first = document.querySelector('#products > div');
+            if (first) openModalForCard(first);
+            else { document.getElementById('products')?.scrollIntoView({behavior:'smooth'}); }
+            return;
+        }
+        if (ev.target.closest('#pm-close')){ modal.classList.add('hidden'); modal.classList.remove('flex'); return; }
+        if (ev.target.closest('#pm-incr')){ const q = document.getElementById('pm-qty'); q.value = Math.max(1, parseInt(q.value||1)+1); updatePriceDisplays(); return; }
+        if (ev.target.closest('#pm-decr')){ const q = document.getElementById('pm-qty'); q.value = Math.max(1, parseInt(q.value||1)-1); updatePriceDisplays(); return; }
+        if (ev.target.closest('#pm-qty')){ /* noop - input change handled below */ }
+        if (ev.target.closest('#pm-order')){
+            const orderBtn = document.getElementById('pm-order');
+            const productName = document.getElementById('pm-name').innerText;
+            const qty = document.getElementById('pm-qty').value || '1';
+            const message = (document.getElementById('pm-message') && document.getElementById('pm-message').value) ? document.getElementById('pm-message').value.trim() : '';
+            if (!/^[0-9]+$/.test(String(qty)) || parseInt(qty) <= 0){ showToast('Iltimos, nechta kerakligini raqam bilan kiriting (1 yoki undan katta).', 2000); return; }
+
+            // prevent double submit
+            if (orderBtn.dataset.submitting === '1') return;
+            orderBtn.dataset.submitting = '1';
+            const origText = orderBtn.innerText;
+            orderBtn.innerText = 'Yuborilmoqda...';
+            orderBtn.disabled = true;
+
+            const sendOrder = async (lat, lon) => {
+                try{
+                    const fd = new FormData();
+                    const combinedNote = productName + (message ? ' — ' + message : '');
+                    fd.append('bottles', qty);
+                    fd.append('note', combinedNote);
+                    // include current client info as fallback in case session is missing
+                    try{
+                        if (typeof DEFAULT_CLIENT_NAME !== 'undefined' && DEFAULT_CLIENT_NAME) fd.append('name', DEFAULT_CLIENT_NAME);
+                        if (typeof DEFAULT_CLIENT_PHONE !== 'undefined' && DEFAULT_CLIENT_PHONE) fd.append('phone', DEFAULT_CLIENT_PHONE);
+                    }catch(e){}
+                    if (lat !== undefined && lon !== undefined){ fd.append('lat', lat); fd.append('lon', lon); }
+                    const resp = await fetch('/client_panel/api/create_order/', {method:'POST', body: fd, credentials: 'same-origin', headers: {'X-Requested-With':'XMLHttpRequest'}});
+                    const data = await resp.json();
+                    if (data && data.status === 'ok'){
+                        // show non-blocking toast confirmation that auto-hides after 2s
+                        showToast('Buyurtma qabul qilindi. Rahmat!', 2000);
+                        modal.classList.add('hidden'); modal.classList.remove('flex');
+                        // redirect after toast hides
+                        setTimeout(function(){ window.location.href = '/client_panel/orders/'; }, 2000);
+                    } else {
+                        showToast(data.message || 'Xato yuz berdi', 3000);
+                        orderBtn.dataset.submitting = '0';
+                        orderBtn.disabled = false;
+                        orderBtn.innerText = origText;
+                    }
+                } catch(e){
+                    showToast('Tarmoq xatosi: '+e.message, 3000);
+                    orderBtn.dataset.submitting = '0';
+                    orderBtn.disabled = false;
+                    orderBtn.innerText = origText;
+                }
+            };
+            if (navigator.geolocation){ navigator.geolocation.getCurrentPosition(function(pos){ sendOrder(pos.coords.latitude, pos.coords.longitude); }, function(){ sendOrder(); }, {timeout:5000}); }
+            else { sendOrder(); }
+            return;
+        }
+    });
+
+    // update total when qty input is manually changed
+    document.addEventListener('input', function(e){ if (e.target && e.target.id === 'pm-qty'){ updatePriceDisplays(); } });
+
+});
+</script>
+{% endblock %}
+{% endblock %}
+</body>
+</html>

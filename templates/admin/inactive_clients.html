@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Faol emas mijozlar (10+ kun){% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <h2 class="text-2xl font-semibold mb-4">Faol emas mijozlar ({{ cutoff_days }}+ kun)</h2>
+    {% if clients %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for c in clients %}
+        <div class="bg-white p-4 rounded shadow">
+            <div class="text-lg font-medium">{{ c.name }} <span class="text-xs text-gray-400">(u_{{ c.client_id }})</span></div>
+            <div class="text-sm text-gray-600 mt-1">Telefon: {{ c.phone }}</div>
+            <div class="text-sm text-gray-600 mt-1">So'nggi buyurtma: {% if c.last_order_date %}{{ c.last_order_date }} ({{ c.days_since }} kun){% else %}Hech qachon{% endif %}</div>
+            <div class="mt-4 text-right">
+                <a href="/admin_panel/clients/{{ c.client_id }}/edit/" class="bg-blue-600 text-white px-3 py-1 rounded">Tahrirlash</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-gray-600">Faol emas mijozlar topilmadi.</div>
+    {% endif %}
+</div>
+{% endblock %}

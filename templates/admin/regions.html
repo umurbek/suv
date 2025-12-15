@@ -1,0 +1,554 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Hududlar</h1>
+
+    <!-- Top controls: Add button (left) and Search (right) -->
+    <div class="flex items-center mb-4 space-x-4">
+        <button class="bg-green-500 text-white px-4 py-2 rounded" onclick="addRegion()">Yangi hudud qo'shish</button>
+        <input type="text" id="search" placeholder="Qidiruv..." class="border p-2 flex-grow" onkeyup="filterTable()">
+    </div>
+
+    <!-- Global transient alert (top-right) -->
+    <div id="global-alert" class="fixed top-4 right-4 hidden z-50 max-w-xs"></div>
+
+    <!-- Regions Table -->
+    <table class="table-auto w-full border-collapse border border-gray-300">
+        <thead>
+            <tr class="bg-gray-200">
+                <th class="border border-gray-300 p-2">Nomi</th>
+                <th class="border border-gray-300 p-2">Bottle</th>
+                <th class="border border-gray-300 p-2">Joylashuv</th>
+                <th class="border border-gray-300 p-2">Telefon</th>
+                <th class="border border-gray-300 p-2">Amallar</th>
+            </tr>
+        </thead>
+        <tbody id="regions-table">
+            {% for region in regions %}
+            <tr data-name="{{ region.name }}">
+                <td class="border border-gray-300 p-2">{{ region.name }}</td>
+                <td class="border border-gray-300 p-2">{{ region.bottle }}</td>
+                <td class="border border-gray-300 p-2">{{ region.location }}</td>
+                <td class="border border-gray-300 p-2">{{ region.phone }}</td>
+                <td class="border border-gray-300 p-2 space-x-2">
+                    <button data-action="edit" class="bg-blue-500 text-white px-2 py-1 rounded">Tahrirlash</button>
+                    <button data-action="map" class="bg-indigo-500 text-white px-2 py-1 rounded">Map</button>
+                    <button data-action="delete" class="bg-red-500 text-white px-2 py-1 rounded">O'chirish</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+<!-- Map Modal -->
+<div id="map-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden z-50">
+    <div class="bg-white rounded-lg w-11/12 md:w-3/4 p-4">
+        <div class="flex items-center justify-between mb-2">
+            <h3 id="map-modal-title" class="text-lg font-semibold">Hudud xaritasi</h3>
+            <div>
+                <a id="map-external-link" class="text-sm text-blue-600 mr-3" target="_blank" rel="noopener">Google Mapsda ochish</a>
+                <button class="px-3 py-1 bg-gray-200 rounded" onclick="closeMapModal()">Yopish</button>
+            </div>
+        </div>
+        <div id="map-modal-body">
+            <div id="map-container" style="height:420px; width:100%;" class="border"></div>
+            <div id="map-empty" class="p-4 text-center text-gray-600 hidden">Bu hududda joylashgan mijozlar topilmadi. Xaritani tashqi xizmatda ochish uchun linkga bosing.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for editing a region -->
+<div id="edit-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
+  <div class="bg-white rounded-lg w-11/12 md:w-1/2 p-6">
+    <h2 class="text-xl font-semibold mb-4">Hududni tahrirlash</h2>
+    <div id="modal-alert" class="hidden mb-3 p-2 rounded text-sm"></div>
+    <form id="edit-region-form" onsubmit="return submitRegionEdit(event)">
+      <input type="hidden" id="orig-name" name="orig_name">
+      <div class="mb-3">
+        <label class="block text-sm font-medium">Nomi</label>
+        <input id="field-name" class="w-full border p-2 rounded" required>
+      </div>
+      <div class="mb-3">
+        <label class="block text-sm font-medium">Bottle</label>
+        <input id="field-bottle" class="w-full border p-2 rounded">
+      </div>
+      <div class="mb-3">
+        <label class="block text-sm font-medium">Joylashuv</label>
+        <input id="field-location" class="w-full border p-2 rounded">
+      </div>
+            <div class="mb-3">
+                <label class="block text-sm font-medium">Telefon</label>
+                <input id="field-phone" class="w-full border p-2 rounded" placeholder="+998XXXXXXXXX">
+            </div>
+      <div class="flex justify-end space-x-2">
+        <button type="button" class="px-4 py-2 rounded bg-gray-200" onclick="closeModal()">Bekor qilish</button>
+        <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white">Saqlash</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal for adding a new region -->
+<div id="add-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white rounded-lg w-11/12 md:w-1/2 p-6">
+        <h2 class="text-xl font-semibold mb-4">Yangi hudud qo'shish</h2>
+        <div id="add-modal-alert" class="hidden mb-3 p-2 rounded text-sm"></div>
+        <form id="add-region-form" onsubmit="return submitAddRegion(event)">
+            <div class="mb-3">
+                <label class="block text-sm font-medium">Ism Familiya</label>
+                <input id="add-field-name" class="w-full border p-2 rounded" required>
+            </div>
+            <div class="mb-3">
+                <label class="block text-sm font-medium">Bottle</label>
+                <input id="add-field-bottle" type="number" min="0" step="1" class="w-full border p-2 rounded" placeholder="0">
+            </div>
+            <div class="mb-3">
+                <label class="block text-sm font-medium">Joylashuv</label>
+                <select id="add-field-location" class="w-full border p-2 rounded">
+                    <option value="">— Tanlang —</option>
+                    {% for loc in locations %}
+                        <option value="{{ loc }}">{{ loc }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="block text-sm font-medium">Telefon</label>
+                <input id="add-field-phone" class="w-full border p-2 rounded" placeholder="+998XXXXXXXXX" value="+998">
+            </div>
+            <div class="flex justify-end space-x-2">
+                <button type="button" class="px-4 py-2 rounded bg-gray-200" onclick="closeAddModal()">Bekor qilish</button>
+                <button type="submit" class="px-4 py-2 rounded bg-green-600 text-white">Hudud qo'shish</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function filterTable() {
+    const search = document.getElementById('search').value.toLowerCase();
+    const rows = document.querySelectorAll('#regions-table tr');
+    rows.forEach(row => {
+        const match = Array.from(row.querySelectorAll('td')).some(td => td.textContent.toLowerCase().includes(search));
+        row.style.display = match ? '' : 'none';
+    });
+}
+
+function addRegion() {
+    // Open the add-new modal instead of prompt flow
+    document.getElementById('add-modal').classList.remove('hidden');
+    document.getElementById('add-modal-alert').classList.add('hidden');
+    // reset fields
+    document.getElementById('add-field-name').value = '';
+    document.getElementById('add-field-bottle').value = '';
+    document.getElementById('add-field-location').value = '';
+    document.getElementById('add-field-phone').value = '+998';
+}
+
+function openModal() {
+    document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('edit-modal').classList.add('hidden');
+    const alert = document.getElementById('modal-alert');
+    alert.classList.add('hidden');
+    alert.textContent = '';
+}
+
+function closeAddModal() {
+    document.getElementById('add-modal').classList.add('hidden');
+    const alert = document.getElementById('add-modal-alert');
+    alert.classList.add('hidden');
+    alert.textContent = '';
+}
+
+function submitAddRegion(event) {
+    event.preventDefault();
+    const name = document.getElementById('add-field-name').value.trim();
+    const bottleRaw = document.getElementById('add-field-bottle').value.trim();
+    const location = document.getElementById('add-field-location').value;
+
+    // bottle validation: allow empty or integer >= 0
+    let bottle = '';
+    if (bottleRaw !== '') {
+        if (!/^\d+$/.test(bottleRaw)) {
+            const alertEl = document.getElementById('add-modal-alert');
+            alertEl.className = 'mb-3 p-2 rounded bg-red-100 text-red-800';
+            alertEl.textContent = 'Bottle maydoniga faqat butun son kiriting.';
+            alertEl.classList.remove('hidden');
+            return false;
+        }
+        bottle = String(parseInt(bottleRaw, 10));
+    }
+
+    // location must be selected
+    if (!location) {
+        const alertEl = document.getElementById('add-modal-alert');
+        alertEl.className = 'mb-3 p-2 rounded bg-red-100 text-red-800';
+        alertEl.textContent = 'Joylashuvni tanlang.';
+        alertEl.classList.remove('hidden');
+        return false;
+    }
+    const phone = document.getElementById('add-field-phone').value.trim();
+
+    if (!name) {
+        const alertEl = document.getElementById('add-modal-alert');
+        alertEl.className = 'mb-3 p-2 rounded bg-red-100 text-red-800';
+        alertEl.textContent = 'Nomi majburiy.';
+        alertEl.classList.remove('hidden');
+        return false;
+    }
+
+    if (phone) {
+        const phoneRegex = /^\+998\d{9}$/;
+        if (!phoneRegex.test(phone)) {
+            const alertEl = document.getElementById('add-modal-alert');
+            alertEl.className = 'mb-3 p-2 rounded bg-red-100 text-red-800';
+            alertEl.textContent = "Telefon formati noto'g'ri. Iltimos +998XXXXXXXXX ko'rinishida kiriting.";
+            alertEl.classList.remove('hidden');
+            return false;
+        }
+    }
+
+    const payload = { name, bottle, location, phone };
+
+    fetch("{% url 'add_region' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(data => {
+        const alertEl = document.getElementById('add-modal-alert');
+        if (data.status === 'success') {
+            alertEl.className = 'mb-3 p-2 rounded bg-green-100 text-green-800';
+            alertEl.textContent = 'Hudud qo\'shildi.';
+            alertEl.classList.remove('hidden');
+
+            // append new row to table
+            const tbody = document.getElementById('regions-table');
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-name', name);
+            tr.innerHTML = `\
+                <td class="border border-gray-300 p-2">${name}</td>\
+                <td class="border border-gray-300 p-2">${bottle}</td>\
+                <td class="border border-gray-300 p-2">${location}</td>\
+                <td class="border border-gray-300 p-2">${phone}</td>
+                <td class="border border-gray-300 p-2 space-x-2">\
+                    <button data-action="edit" class="bg-blue-500 text-white px-2 py-1 rounded">Tahrirlash</button>\
+                    <button data-action="delete" class="bg-red-500 text-white px-2 py-1 rounded">O'chirish</button>\
+                </td>`;
+            tbody.appendChild(tr);
+
+            // hide alert after 3 seconds and close modal
+            setTimeout(() => {
+                closeAddModal();
+            }, 3000);
+        } else {
+            alertEl.className = 'mb-3 p-2 rounded bg-red-100 text-red-800';
+            alertEl.textContent = data.message || 'Xatolik yuz berdi';
+            alertEl.classList.remove('hidden');
+        }
+    })
+    .catch(err => {
+        const alertEl = document.getElementById('add-modal-alert');
+        alertEl.className = 'mb-3 p-2 rounded bg-red-100 text-red-800';
+        alertEl.textContent = err.message || 'Tarmoq xatosi';
+        alertEl.classList.remove('hidden');
+    });
+
+    return false;
+}
+
+function editRegion(button) {
+    const row = button.closest("tr");
+    const name = row.children[0].textContent.trim();
+    const level = row.children[1].textContent.trim();
+    const location = row.children[2].textContent.trim();
+    const phone = row.children[3].textContent.trim();
+
+    document.getElementById('orig-name').value = name;
+    document.getElementById('field-name').value = name;
+    document.getElementById('field-bottle').value = level;
+    document.getElementById('field-location').value = location;
+    document.getElementById('field-phone').value = (phone && phone.length) ? phone : '+998';
+
+    openModal();
+}
+
+function submitRegionEdit(event) {
+    event.preventDefault();
+    const orig = document.getElementById('orig-name').value;
+    const name = document.getElementById('field-name').value.trim();
+    const bottle = document.getElementById('field-bottle').value.trim();
+    const location = document.getElementById('field-location').value.trim();
+    const phone = document.getElementById('field-phone').value.trim();
+
+    // Front-end validation: if phone provided, must be +998 followed by 9 digits
+    if (phone) {
+        const phoneRegex = /^\+998\d{9}$/;
+        if (!phoneRegex.test(phone)) {
+            const alertEl = document.getElementById('modal-alert');
+            alertEl.className = 'mb-3 p-2 rounded bg-red-100 text-red-800';
+            alertEl.textContent = "Telefon formati noto'g'ri. Iltimos +998XXXXXXXXX ko'rinishida kiriting.";
+            alertEl.classList.remove('hidden');
+            return false;
+        }
+    }
+
+    const payload = {
+        orig_name: orig,
+        new_name: name,
+        bottle: bottle,
+        location: location,
+        phone: phone,
+    };
+
+    fetch("{% url 'update_region' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(data => {
+        const alertEl = document.getElementById('modal-alert');
+        if (data.status === 'success') {
+            // update row in-place
+            const rows = document.querySelectorAll('#regions-table tr');
+            for (const row of rows) {
+                const cellName = row.children[0] && row.children[0].textContent.trim();
+                if (cellName === orig) {
+                    row.children[0].textContent = name;
+                    row.children[1].textContent = bottle;
+                    row.children[2].textContent = location;
+                    row.children[3].textContent = phone;
+                    row.dataset.name = name;
+                    break;
+                }
+            }
+            alertEl.className = 'mb-3 p-2 rounded bg-green-100 text-green-800';
+            alertEl.textContent = 'Hudud muvaffaqiyatli yangilandi.';
+            alertEl.classList.remove('hidden');
+            setTimeout(() => closeModal(), 900);
+        } else if (data.status === 'not_found') {
+            alertEl.className = 'mb-3 p-2 rounded bg-yellow-100 text-yellow-800';
+            alertEl.textContent = 'Hudud topilmadi.';
+            alertEl.classList.remove('hidden');
+        } else {
+            alertEl.className = 'mb-3 p-2 rounded bg-red-100 text-red-800';
+            alertEl.textContent = data.message || 'Xatolik yuz berdi';
+            alertEl.classList.remove('hidden');
+        }
+    })
+    .catch(err => {
+        const alertEl = document.getElementById('modal-alert');
+        alertEl.className = 'mb-3 p-2 rounded bg-red-100 text-red-800';
+        alertEl.textContent = err.message || 'Tarmoq xatosi';
+        alertEl.classList.remove('hidden');
+    });
+
+    return false;
+}
+
+function deleteRegion(button) {
+    const row = button.closest("tr");
+    // try to get name from data attribute or first cell
+    let name = row && row.dataset && row.dataset.name;
+    if (!name && row && row.children && row.children[0]) {
+        name = row.children[0].textContent.trim();
+    }
+
+    if (!name) {
+        alert('Hudud nomi topilmadi.');
+        return;
+    }
+
+    if (!confirm(`${name} ni o'chirishni xohlaysizmi?`)) return;
+
+    fetch("{% url 'delete_region' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": getCookie('csrftoken'),
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ name })
+    })
+    .then(res => res.json())
+    .then(data => {
+        const gAlert = document.getElementById('global-alert');
+        if (data.status === "success") {
+            // remove row from DOM without reload
+            if (row && row.parentNode) row.parentNode.removeChild(row);
+            // show transient success notification for 3 seconds
+            if (gAlert) {
+                gAlert.className = 'fixed top-4 right-4 z-50 p-3 rounded shadow bg-green-100 text-green-800';
+                gAlert.textContent = 'Hudud muvaffaqiyatli o\'chirildi.';
+                gAlert.classList.remove('hidden');
+                setTimeout(() => { gAlert.classList.add('hidden'); }, 3000);
+            }
+        } else if (data.status === 'not_found') {
+            if (gAlert) {
+                gAlert.className = 'fixed top-4 right-4 z-50 p-3 rounded shadow bg-yellow-100 text-yellow-800';
+                gAlert.textContent = 'Hudud topilmadi.';
+                gAlert.classList.remove('hidden');
+                setTimeout(() => { gAlert.classList.add('hidden'); }, 3000);
+            } else {
+                alert('Hudud topilmadi.');
+            }
+        } else {
+            if (gAlert) {
+                gAlert.className = 'fixed top-4 right-4 z-50 p-3 rounded shadow bg-red-100 text-red-800';
+                gAlert.textContent = data.message || "Xatolik yuz berdi!";
+                gAlert.classList.remove('hidden');
+                setTimeout(() => { gAlert.classList.add('hidden'); }, 3000);
+            } else {
+                alert(data.message || "Xatolik yuz berdi!");
+            }
+        }
+    })
+    .catch(err => {
+        console.error('Delete error', err);
+        alert('Tarmoq xatosi');
+    });
+}
+
+// Event delegation for edit/delete buttons to ensure dynamically added rows work
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('regions-table');
+    if (!table) return;
+    table.addEventListener('click', function(e) {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        if (!action) return;
+        if (action === 'edit') {
+            // reuse existing handler
+            editRegion(btn);
+        } else if (action === 'map') {
+            // Map: open modal and load clients for region
+            const row = btn.closest('tr');
+            let name = row && row.dataset && row.dataset.name;
+            if (!name && row && row.children && row.children[0]) name = row.children[0].textContent.trim();
+            const csvLocation = row && row.children && row.children[2] ? row.children[2].textContent.trim() : '';
+            openMapModal(name, csvLocation);
+        } else if (action === 'delete') {
+            deleteRegion(btn);
+        }
+    });
+});
+</script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let _regionMap = null;
+let _regionMarkers = [];
+
+function openMapModal(regionName, csvLocation) {
+    document.getElementById('map-modal-title').textContent = regionName ? `"${regionName}" hududidagi mijozlar` : 'Hudud xaritasi';
+    const modal = document.getElementById('map-modal');
+    modal.classList.remove('hidden');
+    document.getElementById('map-empty').classList.add('hidden');
+    document.getElementById('map-container').style.display = '';
+
+    // set external link to Google Maps search for csvLocation as fallback
+    const q = csvLocation || regionName || '';
+    const extLink = document.getElementById('map-external-link');
+    extLink.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+
+    // fetch clients for region
+    fetch("{% url 'region_clients_api' %}?name=" + encodeURIComponent(regionName))
+        .then(r => r.json())
+        .then(data => {
+            if (!data || data.status !== 'ok' || !data.clients || data.clients.length === 0) {
+                // no clients: hide map and show message
+                document.getElementById('map-container').style.display = 'none';
+                document.getElementById('map-empty').classList.remove('hidden');
+                return;
+            }
+            // show map and populate markers
+            document.getElementById('map-empty').classList.add('hidden');
+            initRegionMap(data.clients);
+        })
+        .catch(err => {
+            console.error('Map load error', err);
+            document.getElementById('map-container').style.display = 'none';
+            const el = document.getElementById('map-empty');
+            el.textContent = 'Xatolik yuz berdi. Xaritani tashqi xizmatda ochish uchun linkga bosing.';
+            el.classList.remove('hidden');
+        });
+}
+
+function closeMapModal() {
+    const modal = document.getElementById('map-modal');
+    modal.classList.add('hidden');
+    // cleanup map to avoid memory leak
+    if (_regionMap) {
+        try { _regionMap.remove(); } catch (e) {}
+        _regionMap = null;
+        _regionMarkers = [];
+    }
+}
+
+function initRegionMap(clients) {
+    // cleanup existing
+    if (_regionMap) {
+        try { _regionMap.remove(); } catch (e) {}
+        _regionMap = null;
+        _regionMarkers = [];
+    }
+
+    // find first valid lat/lon
+    let first = clients.find(c => c.lat && c.lon);
+    const mapEl = document.getElementById('map-container');
+    _regionMap = L.map(mapEl).setView(first ? [first.lat, first.lon] : [41.311, 69.2797], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(_regionMap);
+
+    clients.forEach(c => {
+        if (!c.lat || !c.lon) return;
+        const marker = L.marker([c.lat, c.lon]).addTo(_regionMap);
+        marker.bindPopup(`<strong>${escapeHtml(c.full_name || '')}</strong><br>${escapeHtml(c.phone || '')}<br>${escapeHtml(c.note || '')}`);
+        _regionMarkers.push(marker);
+    });
+
+    // fit bounds
+    const group = L.featureGroup(_regionMarkers);
+    try {
+        _regionMap.fitBounds(group.getBounds().pad(0.2));
+    } catch (e) {
+        // ignore if single point
+    }
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[m]; });
+}
+</script>
+{% endblock %}

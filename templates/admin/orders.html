@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">Buyurtmalar - Mijoz profillari</h1>
+            <div class="flex items-center gap-2">
+            <input id="order-search" class="border p-2" placeholder="Qidiruv: ism, telefon yoki manzil" />
+            <button id="clear-search" class="bg-gray-200 px-3 py-2 rounded">Tozalash</button>
+        </div>
+    </div>
+
+    {# Flash notification area #}
+    {% if flash_message %}
+    <div id="flash-message" class="mb-4 px-4 py-3 rounded border {% if flash_type == 'success' %}bg-green-50 border-green-200 text-green-800{% elif flash_type == 'danger' %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+        {{ flash_message }}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- main column: orders -->
+        <div class="lg:col-span-2">
+            <div id="orders-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {% comment %} Render recent orders. Use `orders` provided by the view. {% endcomment %}
+                {% for o in orders %}
+                <div class="bg-white text-gray-800 p-6 rounded-lg shadow">
+                    <h3 class="text-lg font-bold mb-3">{{ o.client_name }}</h3>
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-4 text-gray-600">
+                        <div>Buyurtma ID</div><div class="text-right">{{ o.order_label }}</div>
+                        <div>User ID</div><div class="text-right">{{ o.user_id }}</div>
+                        <div>Telefon</div><div class="text-right">{{ o.phone }}</div>
+                        <div>Manzil</div><div class="text-right">{{ o.address }}</div>
+                        <div>Komment</div><div class="text-right">{{ o.comment }}</div>
+                        <div>Courier</div><div class="text-right">{{ o.courier|default:'-' }}</div>
+                        <div>Bottles</div><div class="text-right">{{ o.bottles }}</div>
+                        <div>Jami</div><div class="text-right">{{ o.amount|default:'-' }}{% if o.amount %} UZS{% endif %}</div>
+                        <div>Status</div>
+                        <div class="text-right">
+                            {% if o.status_label %}
+                            <span class="inline-block px-2 py-1 rounded {{ o.status_class }} text-sm font-semibold">{{ o.status_label }}</span>
+                            {% else %}
+                            <span class="text-gray-600">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="flex gap-3 justify-end">
+                        {% if o.client_id %}
+                        <a href="{% url 'edit_client' client_id=o.client_id %}" class="bg-blue-500 text-white px-4 py-2 rounded">Mijozni tahrirlash</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-gray-600">Ma'lumot mavjud emas</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- right column: rankings -->
+        <aside class="space-y-6">
+            <div class="bg-white p-4 rounded-lg shadow">
+                <h4 class="font-semibold mb-3">Eng ko'p buyurtma bergan mijozlar</h4>
+                <ol class="list-decimal pl-5 text-sm text-gray-700">
+                    {% for c in top_clients %}
+                    <li class="mb-2">{{ c.client__full_name }} — {{ c.orders_count }} ta</li>
+                    {% empty %}
+                    <li>Ma'lumot mavjud emas</li>
+                    {% endfor %}
+                </ol>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow">
+                <h4 class="font-semibold mb-3">Eng ko'p yetkazgan kuryerlar</h4>
+                <ol class="list-decimal pl-5 text-sm text-gray-700">
+                    {% for k in top_couriers %}
+                    <li class="mb-2">{{ k.courier__full_name }} — {{ k.delivered }} ta</li>
+                    {% empty %}
+                    <li>Ma'lumot mavjud emas</li>
+                    {% endfor %}
+                </ol>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow">
+                <h4 class="font-semibold mb-3">Hududlar bo'yicha buyurtmalar</h4>
+                <ul class="text-sm text-gray-700">
+                    {% for r in region_stats %}
+                    <li class="mb-2">{{ r.client__region__name|default:'No region' }} — {{ r.total_orders }} ta</li>
+                    {% empty %}
+                    <li>Ma'lumot mavjud emas</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+</div>
+
+<script>
+    const search = document.getElementById('order-search');
+    const clearBtn = document.getElementById('clear-search');
+    const cards = Array.from(document.querySelectorAll('#orders-grid > div'));
+
+    // auto-dismiss flash message after 3 seconds
+    const flashEl = document.getElementById('flash-message');
+    if (flashEl) {
+        setTimeout(() => {
+            flashEl.style.transition = 'opacity 300ms ease';
+            flashEl.style.opacity = '0';
+            setTimeout(() => { flashEl.remove(); }, 350);
+        }, 3000);
+    }
+
+    function matchCard(card, term) {
+        return card.textContent.toLowerCase().includes(term.toLowerCase());
+    }
+
+    search.addEventListener('input', () => {
+        const q = search.value.trim();
+        cards.forEach(c => c.style.display = q === '' || matchCard(c, q) ? '' : 'none');
+    });
+    clearBtn.addEventListener('click', () => { search.value = ''; search.dispatchEvent(new Event('input')); });
+</script>
+
+{% endblock %}

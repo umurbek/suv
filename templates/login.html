@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="bg-white p-8 rounded shadow-md w-96">
+        <h1 class="text-2xl font-bold mb-6 text-center">Login</h1>
+        <form method="POST" action="{% url 'login' %}" id="role-form" novalidate>
+    {% csrf_token %}
+    <div id="form-error">
+    {% if error %}
+    <div class="mb-4 p-3 bg-red-100 text-red-800 rounded">{{ error }}</div>
+    {% endif %}
+    </div>
+
+    <!-- Role tanlash -->
+    <div class="mb-4">
+        <label for="role" class="block text-gray-700">Role</label>
+        <select id="role" name="role" class="w-full border-gray-300 rounded p-2">
+            <option value="admin" {% if selected_role == 'admin' %}selected{% endif %}>Admin</option>
+            <option value="courier" {% if selected_role == 'courier' %}selected{% endif %}>Courier</option>
+            <option value="client" {% if selected_role == 'client' %}selected{% endif %}>Client</option>
+        </select>
+    </div>
+
+    <!-- Admin input -->
+    <div id="admin-fields" class="role-fields">
+        <div class="mb-4">
+            <label for="admin-name" class="block text-gray-700">Ism (Admin)</label>
+            <input type="text" id="admin-name" name="admin_name" value="{% if admin_name %}{{ admin_name }}{% endif %}" class="w-full border-gray-300 rounded p-2">
+        </div>
+        <div class="mb-4">
+            <label for="admin-phone" class="block text-gray-700">Telefon (ixtiyoriy)</label>
+            <input type="text" id="admin-phone" name="admin_phone" value="{% if admin_phone %}{{ admin_phone }}{% endif %}" class="w-full border-gray-300 rounded p-2">
+        </div>
+        <div class="mb-4">
+            <label for="admin-user" class="block text-gray-700">Login</label>
+            <input type="text" id="admin-user" name="username" value="{% if username %}{{ username }}{% else %}admin{% endif %}" class="w-full border-gray-300 rounded p-2">
+        </div>
+        <div class="mb-4">
+            <label for="password" class="block text-gray-700">Password</label>
+            <input type="password" id="password" name="password" class="w-full border-gray-300 rounded p-2">
+        </div>
+    </div>
+
+    <!-- Courier input -->
+    <div id="courier-fields" class="role-fields hidden">
+        <div class="mb-4">
+            <label for="courier-name" class="block text-gray-700">Courier Name</label>
+            <input type="text" id="courier-name" name="courier_name" required pattern="[A-Za-zА-Яа-яЁёЎўҚқҲҳҒғ\s'\-]+" title="Faqat harf, bo'sh joy va - yoki ' belgilar ruxsat etilgan" value="{% if courier_name %}{{ courier_name }}{% endif %}" class="w-full border-gray-300 rounded p-2">
+        </div>
+        <div class="mb-4">
+            <label for="courier-phone" class="block text-gray-700">Phone Number</label>
+            <input type="text" id="courier-phone" name="courier_phone" required inputmode="tel" maxlength="13" pattern="^\+998[0-9]{9}$" title="Telefon +998XXXXXXXXX formatida bo‘lishi kerak (masalan +998884553663)" value="{% if phone %}{{ phone }}{% else %}+998{% endif %}" class="w-full border-gray-300 rounded p-2">
+        </div>
+    </div>
+
+    <!-- Client input -->
+    <div id="client-fields" class="role-fields hidden">
+        <div class="mb-4">
+            <label for="client-name" class="block text-gray-700">Full Name</label>
+            <input type="text" id="client-name" name="client_name" required pattern="[A-Za-zА-Яа-яЁёЎўҚқҲҳҒғ\s'\-]+" title="Faqat harf, bo'sh joy va - yoki ' belgilar ruxsat etilgan" value="{% if client_name %}{{ client_name }}{% endif %}" class="w-full border-gray-300 rounded p-2">
+        </div>
+        <div class="mb-4">
+            <label for="client-phone" class="block text-gray-700">Phone Number</label>
+            <input type="text" id="client-phone" name="phone" required inputmode="tel" maxlength="13" pattern="^\+998[0-9]{9}$" title="Telefon +998XXXXXXXXX formatida bo‘lishi kerak (masalan +998884553663)" value="{% if phone %}{{ phone }}{% else %}+998{% endif %}" class="w-full border-gray-300 rounded p-2">
+        </div>
+        <div class="mb-4">
+            <label for="client-region" class="block text-gray-700">Hudud</label>
+            <select id="client-region" name="client_region" class="w-full border-gray-300 rounded p-2" required>
+                <option value="">— Tanlang —</option>
+                {% for loc in locations %}
+                <option value="{{ loc }}">{{ loc }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
+        Continue
+    </button>
+</form>
+
+<script>
+const roleSelect = document.getElementById('role');
+function updateFields() {
+    const role = roleSelect.value;
+    document.querySelectorAll('.role-fields').forEach(el => el.classList.add('hidden'));
+    // hide all and clear required
+    // admin fields
+    const adminFields = document.querySelectorAll('#admin-fields input');
+    adminFields.forEach(i => { i.required = false; });
+    // courier fields
+    const courierFields = document.querySelectorAll('#courier-fields input');
+    courierFields.forEach(i => { i.required = false; });
+    // client fields
+    const clientFields = document.querySelectorAll('#client-fields input, #client-fields select');
+    clientFields.forEach(i => { i.required = false; });
+
+    if (role === 'admin') {
+        document.getElementById('admin-fields').classList.remove('hidden');
+        adminFields.forEach(i => { i.required = true; });
+        // admin_phone is optional
+        const adminPhoneEl = document.getElementById('admin-phone');
+        if (adminPhoneEl) adminPhoneEl.required = false;
+    }
+    if (role === 'courier') {
+        document.getElementById('courier-fields').classList.remove('hidden');
+        courierFields.forEach(i => { i.required = true; });
+    }
+    if (role === 'client') {
+        document.getElementById('client-fields').classList.remove('hidden');
+        clientFields.forEach(i => { i.required = true; });
+    }
+}
+
+// Tanlangan role bo‘yicha inputlarni ko‘rsatish
+roleSelect.addEventListener('change', updateFields);
+(function init() {
+    const selected = "{% if selected_role %}{{ selected_role }}{% endif %}";
+    if (selected) roleSelect.value = selected;
+    updateFields();
+})();
+
+// Submit tugmasini disable qilish + feedback
+const form = document.getElementById('role-form');
+form.addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    // Client-side validation: ensure name contains only letters/spaces and phone matches +998#########
+    function showError(msg){
+        const container = document.getElementById('form-error');
+        container.innerHTML = `<div class="mb-4 p-3 bg-red-100 text-red-800 rounded">${msg}</div>`;
+    }
+    const role = roleSelect.value;
+    if (role === 'courier'){
+        const name = document.getElementById('courier-name').value.trim();
+        const phone = document.getElementById('courier-phone').value.trim();
+        const nameRe = null;
+        try { nameRe = new RegExp('^[\\p{L}\\s\'\-]+$','u'); } catch(e) { }
+        const fallbackNameRe = /^[A-Za-zА-Яа-яЁёЎўҚқҲҳҒғ\s'\-]+$/;
+        if (!name || !( (nameRe && nameRe.test(name)) || fallbackNameRe.test(name) )){
+            showError('Ism noto‘g‘ri — faqat harflar, bo\'sh joy va - yoki \' ruxsat etiladi.');
+            return;
+        }
+        if (!/^\+998\d{9}$/.test(phone)){
+            showError('Telefon formati xato — +998XXXXXXXXX ko\'rinishida bo\'lsin.');
+            return;
+        }
+    }
+    if (role === 'client'){
+        const name = document.getElementById('client-name').value.trim();
+        const phone = document.getElementById('client-phone').value.trim();
+        const nameRe = null;
+        try { nameRe = new RegExp('^[\\p{L}\\s\'\-]+$','u'); } catch(e) { }
+        const fallbackNameRe = /^[A-Za-zА-Яа-яЁёЎўҚқҲҳҒғ\s'\-]+$/;
+        if (!name || !( (nameRe && nameRe.test(name)) || fallbackNameRe.test(name) )){
+            showError('Ism noto‘g‘ri — faqat harflar, bo\'sh joy va - yoki \' ruxsat etiladi.');
+            return;
+        }
+        if (!/^\+998\d{9}$/.test(phone)){
+            showError('Telefon formati xato — +998XXXXXXXXX ko\'rinishida bo\'lsin.');
+            return;
+        }
+    }
+    if (role === 'admin'){
+        const adminNameEl = document.getElementById('admin-name');
+        if (adminNameEl){
+            const name = adminNameEl.value.trim();
+            if (name){
+                const nameRe = null;
+                try { nameRe = new RegExp('^[\\p{L}\\s\'\-]+$','u'); } catch(e) { }
+                const fallbackNameRe = /^[A-Za-zА-Яа-яЁёЎўҚқҲҳҒғ\s'\-]+$/;
+                if (!( (nameRe && nameRe.test(name)) || fallbackNameRe.test(name) )){
+                    showError('Admin ismi noto‘g‘ri — faqat harflar, bo\'sh joy va - yoki \' ruxsat etiladi.');
+                    return;
+                }
+            }
+        }
+        const adminPhoneEl = document.getElementById('admin-phone');
+        if (adminPhoneEl){
+            const phone = adminPhoneEl.value.trim();
+            if (phone && !/^\+998\d{9}$/.test(phone)){
+                showError('Admin telefon formati xato — +998XXXXXXXXX ko\'rinishida bo\'lsin.');
+                return;
+            }
+        }
+    }
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Processing...';
+    }
+
+    const fd = new FormData(form);
+    try {
+        const resp = await fetch(form.action || window.location.pathname, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: fd,
+            credentials: 'same-origin'
+        });
+
+        // try parse JSON
+        let data = null;
+        try { data = await resp.json(); } catch(e) { data = null; }
+
+        if (data && data.status === 'ok' && data.next) {
+            window.location.href = data.next;
+            return;
+        }
+
+        // show error from JSON or fallback
+        let errMsg = (data && data.message) ? data.message : ('Server javob bermadi yoki xatolik yuz berdi.');
+        const container = document.getElementById('form-error');
+        container.innerHTML = `<div class="mb-4 p-3 bg-red-100 text-red-800 rounded">${errMsg}</div>`;
+
+    } catch (err) {
+        const container = document.getElementById('form-error');
+        container.innerHTML = `<div class="mb-4 p-3 bg-red-100 text-red-800 rounded">Tarmoq xatosi: ${err.message}</div>`;
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Continue';
+        }
+    }
+});
+</script>
+
+    </div>
+</body>
+</html>
