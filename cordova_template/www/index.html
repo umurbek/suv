@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MyApp (Cordova) - Demo</title>
+  <style>body{font-family:sans-serif;padding:1rem}button{padding:.6rem 1rem;background:#0b74de;color:white;border:none;border-radius:6px}</style>
+</head>
+<body>
+  <h1>MyApp (Cordova) demo</h1>
+  <p>Bu minimal demo sahifa serverdagi `/client_panel/api/create_order/` endpointini chaqiradi.</p>
+  <div>
+    <label>Ism: <input id="name" value="Test User"></label><br>
+    <label>Telefon: <input id="phone" value="+998901112233"></label><br>
+    <label>Bottles: <input id="bottles" value="1" type="number" min="1"></label><br>
+    <label>Note: <input id="note" value="Cordova demo"></label><br>
+    <button id="send">Buyurtma yuborish</button>
+  </div>
+  <pre id="log" style="white-space:pre-wrap;background:#f7f7f7;padding:8px;margin-top:1rem"></pre>
+
+  <script>
+  // simple fetch using absolute API_BASE set below
+  async function sendOrder(){
+    const name = document.getElementById('name').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const bottles = document.getElementById('bottles').value || '1';
+    const note = document.getElementById('note').value || '';
+    const log = document.getElementById('log');
+    log.innerText = 'Yuborilmoqda...';
+
+    const fd = new FormData();
+    fd.append('name', name);
+    fd.append('phone', phone);
+    fd.append('bottles', bottles);
+    fd.append('note', note);
+
+    try{
+      const resp = await fetch(API_BASE + 'client_panel/api/create_order/', { method: 'POST', body: fd });
+      const data = await resp.json();
+      log.innerText = JSON.stringify({status:resp.status, ok:resp.ok, data}, null, 2);
+    }catch(e){
+      log.innerText = 'Xato: '+e.message;
+    }
+  }
+  document.getElementById('send').addEventListener('click', sendOrder);
+  </script>
+
+  <script src="js/config.js"></script>
+</body>
+</html>

@@ -146,6 +146,16 @@ REST_FRAMEWORK = {
 CORS_ALLOW_ALL_ORIGINS = True
 
 
+# Production recommendation: instead of allowing all origins, restrict to known origins.
+# Uncomment and edit the following in production:
+# CORS_ALLOWED_ORIGINS = [
+#     "https://your-client-domain.uz",
+#     "https://api.sizningdomen.uz",
+#     "http://localhost",
+#     "capacitor://localhost",
+# ]
+
+
 
 
 TELEGRAM_BOT_TOKEN="8355200827:AAGL0fZKoPbfSJptmNjVT1ff6xBvOL2nhFY"
