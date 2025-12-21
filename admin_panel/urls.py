@@ -7,6 +7,7 @@ urlpatterns = [
     path('regions/add/', views.add_region, name='add_region'),
     path('regions/update/', views.update_region, name='update_region'),
     path('regions/clients/', views.region_clients_api, name='region_clients_api'),
+    path('api/clients_positions/', views.clients_positions_api, name='clients_positions_api'),
     path('regions/delete/', views.delete_region, name='delete_region'),
     path('couriers/', views.couriers_view, name='couriers_view'),
     path('couriers/add/', views.add_courier, name='add_courier'),

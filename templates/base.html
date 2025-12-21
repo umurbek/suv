@@ -1,264 +1,223 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}CRM Admin{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>{% block title %}{{ T.crm_admin|default:'CRM Admin' }}{% endblock %}</title>
 
-    <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-sidebar {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .nav-link-active {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0) 100%);
+            border-left: 3px solid #3b82f6;
+            color: #fff !important;
+        }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="font-sans bg-gray-50 text-gray-900">
+<body class="bg-[#020617] text-slate-300">
 
-<div class="flex">
+<div class="flex min-h-screen">
 
-    <!-- SIDEBAR (desktop) -->
-    <aside id="sidebar" class="w-64 h-screen bg-blue-900 text-white p-6 flex flex-col justify-between fixed hidden md:flex">
+    <aside id="sidebar" class="w-72 h-screen fixed hidden md:flex flex-col glass-sidebar z-40 transition-all duration-300">
+        
+        <div class="p-8">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30">
+                    <i class="fa-solid fa-droplet text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold text-white tracking-tight uppercase">Aqua<span class="text-blue-500">Flow</span></h1>
+                    <p class="text-[10px] text-slate-500 font-bold tracking-[0.2em]">MANAGEMENT v2.5</p>
+                </div>
+            </div>
+        </div>
 
-        <div>
-            <div class="flex items-center space-x-3 mb-6">
-                {% if request.session.courier_id and request.path|slice:"0:15" == '/courier_panel/' %}
-                <span class="text-3xl">🚴</span>
-                <div>
-                    <h1 class="text-2xl font-bold">Kuryer Paneli</h1>
-                    <p class="text-xs text-white/80">Kuryer: {{ request.session.courier_name|default:'Anonim' }} • {{ request.session.courier_phone|default:'' }}</p>
+        <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
+            
+            <div class="mx-2 mb-6 p-4 rounded-2xl bg-white/5 border border-white/5">
+                <p class="text-[10px] uppercase font-bold text-slate-500 mb-2">Hozirgi profil</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-400 flex items-center justify-center text-white text-xs font-bold">
+                        {% if request.session.admin_name %}{{ request.session.admin_name|slice:":1" }}{% else %}A{% endif %}
+                    </div>
+                    <div class="overflow-hidden">
+                        <p class="text-sm font-bold text-white truncate">
+                            {% if request.session.courier_name %}{{ request.session.courier_name }}
+                            {% elif request.session.client_name %}{{ request.session.client_name }}
+                            {% else %}{{ request.session.admin_name|default:'Administrator' }}{% endif %}
+                        </p>
+                        <p class="text-[10px] text-emerald-500 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Online
+                        </p>
+                    </div>
                 </div>
-                {% elif request.session.client_id and request.path|slice:"0:14" == '/client_panel/' %}
-                <span class="text-3xl">👤</span>
-                <div>
-                    <h1 class="text-2xl font-bold">Mening Dashboard</h1>
-                    <p class="text-xs text-white/80">{% if request.session.customer_id %}Customer ID: {{ request.session.customer_id }}{% endif %}{% if request.session.client_name %} • {{ request.session.client_name }}{% endif %}{% if request.session.client_phone %} • {{ request.session.client_phone }}{% endif %}</p>
-                </div>
-                {% else %}
-                <span class="text-3xl">💧</span>
-                <div>
-                    <h1 class="text-2xl font-bold">CRM Admin</h1>
-                    <p class="text-xs text-white/80">{% if request.session.admin_name %}{{ request.session.admin_name }}{% else %}Suv yetkazib berish{% endif %}{% if request.session.admin_phone %} • {{ request.session.admin_phone }}{% endif %}</p>
-                </div>
-                {% endif %}
             </div>
 
-            {% if request.session.courier_id and request.path|slice:"0:15" == '/courier_panel/' %}
-            <ul class="space-y-3">
-                <li>
-                    <a href="/courier_panel/dashboard/" class="block px-3 py-2 rounded-lg {% if request.path == '/courier_panel/dashboard/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">🏠 Mening dashboard</a>
-                </li>
-                <li>
-                    <a href="/courier_panel/new_orders/" class="relative block px-3 py-2 rounded-lg {% if request.path == '/courier_panel/new_orders/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">
-                        🆕 Yangi buyurtmalar
-                        <span id="newOrdersBadge" class="hidden absolute -top-2 right-2 bg-red-600 text-white text-xs font-semibold rounded-full px-1.5 py-0.5">0</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="/courier_panel/history/" class="block px-3 py-2 rounded-lg {% if request.path == '/courier_panel/history/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">📜 Qilingan ishlar tarixi</a>
-                </li>
-                <li>
-                    <a href="/courier_panel/contact_admin/" class="block px-3 py-2 rounded-lg {% if request.path == '/courier_panel/contact_admin/' or request.session.last_view == 'contact_admin' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">✉️ Admin bilan aloqa</a>
-                </li>
-            </ul>
-            {% elif request.session.client_id and request.path|slice:"0:14" == '/client_panel/' %}
-            <ul class="space-y-3">
-                <li>
-                    <a href="/client_panel/dashboard/" class="block px-3 py-2 rounded-lg {% if request.path == '/client_panel/dashboard/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">🏠 Mening dashboard</a>
-                </li>
-                <li>
-                    <a href="/client_panel/profile/" class="block px-3 py-2 rounded-lg {% if request.path == '/client_panel/profile/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">👤 Profil</a>
-                </li>
-                <li>
-                    <a href="/client_panel/orders/" class="block px-3 py-2 rounded-lg {% if request.path == '/client_panel/orders/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">📦 Buyurtmalar</a>
-                </li>
-                <li>
-                    <a href="/client_panel/contact_admin/" class="block px-3 py-2 rounded-lg {% if request.path == '/client_panel/contact_admin/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">✉️ Yordam</a>
-                </li>
-            </ul>
+            {% if request.session.courier_id and '/courier_panel/' in request.path %}
+                <p class="px-4 text-[10px] font-bold text-slate-600 uppercase mb-2">Kuryer menyusi</p>
+                {% include "partials/nav_item.html" with link="/courier_panel/dashboard/" icon="fa-house" text=T.dashboard|default:'Dashboard' %}
+                {% include "partials/nav_item.html" with link="/courier_panel/new_orders/" icon="fa-bell" text=T.new_orders|default:'Yangi buyurtmalar' badge="newOrdersBadge" %}
+                {% include "partials/nav_item.html" with link="/courier_panel/history/" icon="fa-clock-rotate-left" text=T.history|default:'Tarix' %}
+            
+            {% elif request.session.client_id and '/client_panel/' in request.path %}
+                <p class="px-4 text-[10px] font-bold text-slate-600 uppercase mb-2">Mijoz menyusi</p>
+                {% include "partials/nav_item.html" with link="/client_panel/dashboard/" icon="fa-house" text="Asosiy" %}
+                {% include "partials/nav_item.html" with link="/client_panel/orders/" icon="fa-box-open" text="Buyurtmalarim" %}
+                {% include "partials/nav_item.html" with link="/client_panel/profile/" icon="fa-user-gear" text="Profil sozlamalari" %}
+
             {% else %}
-            <ul class="space-y-3">
-                <li>
-                    <a href="/admin_panel/dashboard/" class="block px-3 py-2 rounded-lg {% if request.path == '/admin_panel/dashboard/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">🏠 Boshqaruv paneli</a>
-                </li>
-                <li>
-                    <a href="/admin_panel/regions/" class="block px-3 py-2 rounded-lg {% if request.path == '/admin_panel/regions/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">🗺️ Hududlar</a>
-                </li>
-                <li>
-                    <a href="/admin_panel/couriers/" class="block px-3 py-2 rounded-lg {% if request.path == '/admin_panel/couriers/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">🚚 Kuryerlar</a>
-                </li>
-                <li>
-                    <a href="/admin_panel/orders/" class="block px-3 py-2 rounded-lg {% if request.path == '/admin_panel/orders/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">📦 Buyurtmalar</a>
-                </li>
-                <li>
-                    <a href="/admin_panel/reports/" class="block px-3 py-2 rounded-lg {% if request.path == '/admin_panel/reports/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">📊 Hisobotlar</a>
-                </li>
-
-                <!-- Qarzdorlar link with separate 10+ button underneath -->
-                <li>
-                    <a href="/admin_panel/debtors/" class="block px-3 py-2 rounded-lg {% if request.path == '/admin_panel/debtors/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">
-                        <div class="flex items-center space-x-2">
-                            <span>📈</span>
-                            <span class="font-semibold">Qarzdorlar</span>
-                        </div>
+                <p class="px-4 text-[10px] font-bold text-slate-600 uppercase mb-2">Asosiy boshqaruv</p>
+                <a href="/admin_panel/dashboard/" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 {% if '/admin_panel/dashboard/' in request.path %}nav-link-active{% endif %}">
+                    <i class="fa-solid fa-chart-pie w-5"></i> <span class="text-sm font-semibold">Dashboard</span>
+                </a>
+                <a href="/admin_panel/orders/" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 {% if '/admin_panel/orders/' in request.path %}nav-link-active{% endif %}">
+                    <i class="fa-solid fa-cart-shopping w-5"></i> <span class="text-sm font-semibold">Buyurtmalar</span>
+                </a>
+                <a href="/admin_panel/couriers/" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 {% if '/admin_panel/couriers/' in request.path %}nav-link-active{% endif %}">
+                    <i class="fa-solid fa-truck-ramp-box w-5"></i> <span class="text-sm font-semibold">Kuryerlar</span>
+                </a>
+                <a href="/admin_panel/debtors/" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 {% if '/admin_panel/debtors/' in request.path %}nav-link-active{% endif %}">
+                    <i class="fa-solid fa-hand-holding-dollar w-5"></i> <span class="text-sm font-semibold text-red-400">Qarzdorlar</span>
+                </a>
+                <div class="pt-4 mt-4 border-t border-white/5">
+                    <p class="px-4 text-[10px] font-bold text-slate-600 uppercase mb-2">Tizim</p>
+                    <a href="/admin_panel/reports/" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5">
+                        <i class="fa-solid fa-file-invoice-dollar w-5"></i> <span class="text-sm font-semibold">Hisobotlar</span>
                     </a>
-                </li>
-                <li class="ml-4">
-                    <a href="/admin_panel/inactive/10days/" class="block px-3 py-1 rounded-md text-sm {% if request.path == '/admin_panel/inactive/10days/' %}bg-yellow-600 text-white{% else %}bg-yellow-100 text-yellow-800 hover:bg-yellow-200{% endif %}">
-                        10+ kun buyurtma yo'q
-                    </a>
-                </li>
-            </ul>
+                </div>
             {% endif %}
+        </nav>
 
+        <div class="p-4 border-t border-white/5 bg-black/20">
+            <form method="POST" action="/set_language/" class="mb-4">
+                {% csrf_token %}
+                <select name="lang" onchange="this.form.submit()" class="w-full bg-slate-800 border-none text-xs rounded-xl p-2.5 text-white focus:ring-blue-500">
+                    {% for code,label in LANG_OPTIONS %}
+                    <option value="{{ code }}" {% if current_lang == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            <a href="/logout/" class="flex items-center justify-center gap-2 w-full py-3 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all font-bold text-sm">
+                <i class="fa-solid fa-power-off"></i> {{ T.logout|default:'Chiqish' }}
+            </a>
         </div>
-
-        <div>
-            <a href="/logout/" class="block bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-center">📤 Chiqish</a>
-        </div>
-
     </aside>
 
-    <!-- Mobile top bar (small screens) -->
-    <div class="w-full md:hidden bg-white border-b p-3 fixed z-30">
-        <div class="flex items-center justify-between">
-            {% if not request.session.client_id or request.path|slice:"0:14" != '/client_panel/' %}
-            <button id="mobile-menu-btn" class="p-2 rounded bg-blue-600 text-white">
-                ☰
+    <main class="flex-1 md:ml-72 min-h-screen pb-24 md:pb-8">
+        
+        <header class="md:hidden flex items-center justify-between p-4 sticky top-0 bg-[#020617]/80 backdrop-blur-md z-30 border-b border-white/5">
+            <button id="mobile-menu-btn" class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white">
+                <i class="fa-solid fa-bars-staggered"></i>
             </button>
-            {% endif %}
-            <div class="flex items-center space-x-2">
-                <!-- static logo (replace later) -->
-                <img src="/static/img/logo.png" alt="logo" class="h-7 w-7 object-contain" onerror="this.style.display='none'" />
-                <div class="text-lg font-semibold">Suv yetkazib berish</div>
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+                    <i class="fa-solid fa-droplet text-white text-sm"></i>
+                </div>
+                <span class="font-bold text-white tracking-tight">AQUAFLOW</span>
             </div>
-            <div class="flex items-center space-x-2">
-                <!-- Mobile quick order button -->
-                <button id="mobile-order-btn" class="p-2 rounded bg-blue-600 text-white ml-2 md:hidden">🛒</button>
+            <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
+                <span class="text-xs font-bold">{{ request.session.admin_name|slice:":1"|default:"A" }}</span>
             </div>
-            <div></div>
-        </div>
-    </div>
+        </header>
 
-    <!-- MAIN CONTENT -->
-    <div id="main-content" class="ml-0 md:ml-64 w-full p-6 pt-20 md:pt-6">
-        {% block content %}{% endblock %}
-    </div>
+        <div class="p-4 md:p-8">
+            {% block content %}{% endblock %}
+        </div>
+
+    </main>
 
 </div>
 
-<!-- Mobile off-canvas sidebar (small screens) -->
-{% if not request.session.client_id or request.path|slice:"0:14" != '/client_panel/' %}
-<div id="mobile-sidebar-overlay" class="hidden fixed inset-0 bg-black/40 z-40"></div>
-<aside id="mobile-sidebar" class="hidden fixed inset-y-0 left-0 w-64 bg-blue-900 text-white p-6 z-50 overflow-auto">
-    <!-- Duplicate of sidebar content for mobile drawer -->
-    <div>
-        <div class="flex items-center space-x-3 mb-6">
-            <span class="text-3xl">💧</span>
-            <div>
-                <h1 class="text-2xl font-bold">CRM Admin</h1>
-                <p class="text-xs text-white/80">{% if request.session.admin_name %}{{ request.session.admin_name }}{% else %}Suv yetkazib berish{% endif %}{% if request.session.admin_phone %} • {{ request.session.admin_phone }}{% endif %}</p>
-            </div>
-        </div>
+<div id="mobile-sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity duration-300"></div>
 
-        <ul class="space-y-3">
-            <li>
-                <a href="/admin_panel/dashboard/" class="block px-3 py-2 rounded-lg {% if request.path == '/admin_panel/dashboard/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">🏠 Boshqaruv paneli</a>
-            </li>
-            <li>
-                <a href="/admin_panel/regions/" class="block px-3 py-2 rounded-lg {% if request.path == '/admin_panel/regions/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">🗺️ Hududlar</a>
-            </li>
-            <li>
-                <a href="/admin_panel/couriers/" class="block px-3 py-2 rounded-lg {% if request.path == '/admin_panel/couriers/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">🚚 Kuryerlar</a>
-            </li>
-            <li>
-                <a href="/admin_panel/orders/" class="block px-3 py-2 rounded-lg {% if request.path == '/admin_panel/orders/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">📦 Buyurtmalar</a>
-            </li>
-            <li>
-                <a href="/admin_panel/reports/" class="block px-3 py-2 rounded-lg {% if request.path == '/admin_panel/reports/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">📊 Hisobotlar</a>
-            </li>
-            <li>
-                <a href="/admin_panel/debtors/" class="block px-3 py-2 rounded-lg {% if request.path == '/admin_panel/debtors/' %}bg-blue-600{% else %}bg-blue-700 hover:bg-blue-600{% endif %}">
-                    <div class="flex items-center space-x-2">
-                        <span>📈</span>
-                        <span class="font-semibold">Qarzdorlar</span>
-                    </div>
-                </a>
-            </li>
-            <li class="ml-4">
-                <a href="/admin_panel/inactive/10days/" class="block px-3 py-1 rounded-md text-sm {% if request.path == '/admin_panel/inactive/10days/' %}bg-yellow-600 text-white{% else %}bg-yellow-100 text-yellow-800 hover:bg-yellow-200{% endif %}">10+ kun buyurtma yo'q</a>
-            </li>
-        </ul>
+{% if request.session.admin_id or request.session.client_id or request.session.courier_id %}
+<nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-lg bg-[#0f172a]/90 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl md:hidden z-50 p-2">
+    <div class="flex justify-around items-center">
+        {% if '/admin_panel/' in request.path %}
+            <a href="/admin_panel/dashboard/" class="p-3 rounded-2xl {% if '/dashboard/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
+                <i class="fa-solid fa-house text-xl"></i>
+            </a>
+            <a href="/admin_panel/orders/" class="p-3 rounded-2xl {% if '/orders/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
+                <i class="fa-solid fa-boxes-stacked text-xl"></i>
+            </a>
+            <a href="/admin_panel/couriers/" class="p-3 rounded-2xl {% if '/couriers/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
+                <i class="fa-solid fa-truck-fast text-xl"></i>
+            </a>
+            <a href="/admin_panel/reports/" class="p-3 rounded-2xl {% if '/reports/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
+                <i class="fa-solid fa-chart-line text-xl"></i>
+            </a>
+        {% elif '/client_panel/' in request.path %}
+            <a href="/client_panel/dashboard/" class="p-3 rounded-2xl {% if '/dashboard/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
+                <i class="fa-solid fa-house text-xl"></i>
+            </a>
+            <a href="/client_panel/orders/" class="p-3 rounded-2xl {% if '/orders/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
+                <i class="fa-solid fa-receipt text-xl"></i>
+            </a>
+            <a href="/client_panel/profile/" class="p-3 rounded-2xl {% if '/profile/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
+                <i class="fa-solid fa-user text-xl"></i>
+            </a>
+        {% endif %}
     </div>
-    <div>
-        <a href="/logout/" class="block bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-center mt-6">📤 Chiqish</a>
-    </div>
-</aside>
+</nav>
 {% endif %}
 
-{% block extra_scripts %}
+{% if '/client_panel/' in request.path %}
+<a href="/client_panel/dashboard/#products" class="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-600/40 md:hidden z-40 animate-bounce">
+    <i class="fa-solid fa-plus text-2xl"></i>
+</a>
+{% endif %}
+
 <script>
-// Mobile sidebar toggle
-document.addEventListener('DOMContentLoaded', function(){
-    const btn = document.getElementById('mobile-menu-btn');
-    const mobile = document.getElementById('mobile-sidebar');
+    // Mobile Sidebar Toggle Logic
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('mobile-sidebar-overlay');
-    if (!btn || !mobile) return;
-    const open = () => { mobile.classList.remove('hidden'); overlay.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); };
-    const close = () => { mobile.classList.add('hidden'); overlay.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); };
-    btn.addEventListener('click', open);
-    overlay.addEventListener('click', close);
-    // close when route changes via sidebar links
-    mobile.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
-});
-</script>
-{% endblock %}
 
-<!-- Global courier badge poller: updates sidebar badge on any courier page -->
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-    // only run on courier pages where the badge exists
-    if (!window.location.pathname.startsWith('/courier_panel/')) return;
-    const badge = () => document.getElementById('newOrdersBadge');
-    async function pollBadge(){
-        try{
-            const resp = await fetch('/courier_panel/api/new_orders/');
-            const j = await resp.json();
-            if (j && j.status === 'ok'){
-                const b = badge();
-                if (!b) return;
-                const n = Array.isArray(j.data) ? j.data.length : 0;
-                if (n > 0) { b.innerText = n > 9 ? '9+' : String(n); b.classList.remove('hidden'); }
-                else { b.classList.add('hidden'); }
-            }
-        } catch (e){ /* ignore network errors silently */ console.error('badge poll error', e); }
+    if(menuBtn) {
+        menuBtn.addEventListener('click', () => {
+            sidebar.classList.remove('hidden');
+            sidebar.classList.add('flex', 'w-72', 'left-0');
+            overlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        });
     }
-    // initial fetch and interval
-    pollBadge();
-    setInterval(pollBadge, 7000);
-});
+
+    if(overlay) {
+        overlay.addEventListener('click', () => {
+            sidebar.classList.add('hidden');
+            overlay.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        });
+    }
+
+    // New Orders Badge Polling
+    function updateBadges() {
+        if (!window.location.pathname.startsWith('/courier_panel/')) return;
+        fetch('/courier_panel/api/new_orders/')
+            .then(r => r.json())
+            .then(j => {
+                const b = document.getElementById('newOrdersBadge');
+                if (b && j.status === 'ok') {
+                    const n = j.data.length;
+                    b.innerText = n > 0 ? (n > 9 ? '9+' : n) : '';
+                    b.style.display = n > 0 ? 'flex' : 'none';
+                }
+            }).catch(e => console.debug('Badge update failed'));
+    }
+    setInterval(updateBadges, 10000);
 </script>
 
-    {# Mobile bottom navigation for client pages (visible on small screens) #}
-    {% if request.session.client_id and request.path|slice:"0:14" == '/client_panel/' %}
-    <nav class="fixed inset-x-0 bottom-0 bg-white border-t md:hidden z-40">
-        <div class="max-w-md mx-auto flex justify-between items-center px-4 py-2">
-            <a href="/client_panel/dashboard/" class="flex flex-col items-center text-xs text-gray-700 {% if request.path == '/client_panel/dashboard/' %}text-blue-600{% endif %}">
-                <div class="text-2xl">🏠</div>
-                <div>Asosiy</div>
-            </a>
-            <a href="/client_panel/dashboard/#products" class="flex flex-col items-center text-xs text-gray-700">
-                <div class="text-2xl">🛒</div>
-                <div>Buyurtma</div>
-            </a>
-            <a href="/client_panel/orders/" class="flex flex-col items-center text-xs text-gray-700 {% if request.path == '/client_panel/orders/' %}text-blue-600{% endif %}">
-                <div class="text-2xl">🕘</div>
-                <div>Tarix</div>
-            </a>
-            <a href="/client_panel/profile/" class="flex flex-col items-center text-xs text-gray-700 {% if request.path == '/client_panel/profile/' %}text-blue-600{% endif %}">
-                <div class="text-2xl">👤</div>
-                <div>Profil</div>
-            </a>
-        </div>
-    </nav>
-    <!-- Floating action order button (visible on client pages) -->
-    <button id="fab-order-btn" aria-label="Buyurtma berish" class="fixed bottom-24 right-4 md:right-8 bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg z-50">🛒</button>
-    {% endif %}
+{% block extra_scripts %}{% endblock %}
 </body>
 </html>

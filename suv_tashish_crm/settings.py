@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-tmh!3n1^z)cwrc3!j7iq*rz%(&bwpexu+%b1&e^1ge3e)(qa6#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -71,6 +71,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'admin_panel.context_processors.sidebar_debtors',
+                'suv_tashish_crm.context_processors.language_context',
             ],
         },
     },

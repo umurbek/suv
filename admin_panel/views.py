@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, Q
 from suv_tashish_crm.models import Order, Client, Courier, Region
 from django.utils import timezone
 import random
@@ -67,18 +67,29 @@ def admin_dashboard(request):
                     use_name = csv_phone_by_last6.get(digits_only[-6:])
 
         top_debtors.append({'id': c.id, 'full_name': use_name, 'region': getattr(c.region, 'name', None), 'debt': getattr(c, 'debt', 0)})
-    # Build simple weekly orders stats for the chart (last 7 days)
+    # Build simple stats for the chart: last 7 days and last 30 days
     weekly_labels = []
     weekly_counts = []
+    monthly_labels = []
+    monthly_counts = []
     try:
         today = datetime.date.today()
+        # last 7 days
         for i in range(6, -1, -1):
             day = today - datetime.timedelta(days=i)
             weekly_labels.append(day.strftime('%a'))
             weekly_counts.append(Order.objects.filter(created_at__date=day).count())
+
+        # last 30 days: labels are day numbers (e.g., '01', '02', ...)
+        for i in range(29, -1, -1):
+            day = today - datetime.timedelta(days=i)
+            monthly_labels.append(day.strftime('%d %b'))
+            monthly_counts.append(Order.objects.filter(created_at__date=day).count())
     except Exception:
         weekly_labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
         weekly_counts = [0,0,0,0,0,0,0]
+        monthly_labels = [f"{i+1}" for i in range(30)]
+        monthly_counts = [0] * 30
 
     # Top clients by number of orders (for dashboard sidebar)
     try:
@@ -124,6 +135,8 @@ def admin_dashboard(request):
         'region_stats': region_stats,
         'weekly_labels_json': json.dumps(weekly_labels, ensure_ascii=False),
         'weekly_data_json': json.dumps(weekly_counts),
+        'monthly_labels_json': json.dumps(monthly_labels, ensure_ascii=False),
+        'monthly_data_json': json.dumps(monthly_counts),
     }
 
     return render(request, 'admin/admin_dashboard.html', context)
@@ -146,16 +159,50 @@ def read_csv_data():
 
 
 def regions_view(request):
-    # Auth guard temporarily disabled; re-enable when ready
-    regions = read_csv_data()
-    # build a unique list of locations (hududlar) from CSV to populate selects
-    locations = []
-    seen = set()
-    for r in regions:
-        loc = (r.get('location') or '').strip()
-        if loc and loc not in seen:
-            seen.add(loc)
-            locations.append(loc)
+    # Prefer DB-backed regions; fall back to CSV if DB is empty
+    try:
+        static_regions = read_csv_data()
+    except Exception:
+        static_regions = []
+
+    # build a map from CSV region name -> CSV row for optional metadata
+    csv_map = { (r.get('name') or '').strip(): r for r in static_regions }
+
+    try:
+        qs = Region.objects.order_by('name')
+        regions = []
+        seen_locations = set()
+        locations = []
+        for reg in qs:
+            name = reg.name
+            csv_row = csv_map.get(name, {})
+            loc = (csv_row.get('location') or '').strip()
+            bottle = csv_row.get('bottle') if csv_row else ''
+            phone = csv_row.get('phone') if csv_row else ''
+            regions.append({'name': name, 'bottle': bottle, 'location': loc, 'phone': phone})
+            if loc and loc not in seen_locations:
+                seen_locations.add(loc)
+                locations.append(loc)
+
+        # If DB has no regions but CSV does, show CSV rows instead
+        if not regions and static_regions:
+            regions = static_regions
+            seen_locations = set()
+            locations = []
+            for r in static_regions:
+                loc = (r.get('location') or '').strip()
+                if loc and loc not in seen_locations:
+                    seen_locations.add(loc)
+                    locations.append(loc)
+    except Exception:
+        regions = static_regions
+        locations = []
+        seen = set()
+        for r in regions:
+            loc = (r.get('location') or '').strip()
+            if loc and loc not in seen:
+                seen.add(loc)
+                locations.append(loc)
 
     return render(request, 'admin/regions.html', {'regions': regions, 'locations': locations})
 
@@ -170,25 +217,14 @@ def add_region(request):
             bottle = (payload.get('bottle') or '').strip()
             location = (payload.get('location') or '').strip()
             phone = (payload.get('phone') or '').strip()
-
             if not name:
                 return JsonResponse({'status': 'error', 'message': "Hudud nomi kerak."})
 
-            # validate phone if provided
-            if phone:
-                if not re.match(r'^\+998\d{9}$', phone):
-                    return JsonResponse({'status': 'error', 'message': "Telefon formati noto'g'ri. Iltimos '+998XXXXXXXXX' formatida kiriting."})
+            # create or get Region in DB
+            region_obj, created = Region.objects.get_or_create(name=name)
 
-            csv_path = os.path.join(BASE_DIR, 'Volidam.csv')
-            file_exists = os.path.exists(csv_path)
-            # append new row, create file with header if missing
-            with open(csv_path, 'a', encoding='utf-8', newline='') as f:
-                writer = csv.writer(f)
-                if not file_exists:
-                    writer.writerow(['name', 'bottle', 'location', 'phone'])
-                writer.writerow([name, bottle, location, phone])
-
-            return JsonResponse({'status': 'success', 'region': {'name': name, 'bottle': bottle, 'location': location, 'phone': phone}})
+            # We keep CSV metadata for backward compatibility but do not write to CSV here.
+            return JsonResponse({'status': 'success', 'region': {'name': region_obj.name, 'bottle': bottle, 'location': location, 'phone': phone, 'created': created}})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
@@ -205,50 +241,26 @@ def update_region(request):
             new_bottle = payload.get('bottle')
             new_location = payload.get('location') or payload.get('newLocation')
             new_phone = payload.get('phone') or payload.get('newPhone')
-
-            # Server-side phone validation: if provided, must be +998 followed by 9 digits (total length 13)
+            # Server-side phone validation: if provided, must be +998 followed by 9 digits
             if new_phone:
                 new_phone = new_phone.strip()
                 if not re.match(r'^\+998\d{9}$', new_phone):
-                    return JsonResponse({
-                        'status': 'error',
-                        'message': "Telefon formati noto'g'ri. Iltimos '+998XXXXXXXXX' formatida kiriting."
-                    })
+                    return JsonResponse({'status': 'error', 'message': "Telefon formati noto'g'ri. Iltimos '+998XXXXXXXXX' formatida kiriting."})
 
-            csv_path = os.path.join(BASE_DIR, 'Volidam.csv')
-            updated = False
-            rows = []
-            # Read existing CSV
-            with open(csv_path, 'r', encoding='utf-8') as f:
-                reader = csv.reader(f)
-                headers = next(reader, None)
-                for row in reader:
-                    # row layout assumed: name, bottle, location, phone
-                    name = row[0] if len(row) > 0 else ''
-                    if orig_name and name == orig_name:
-                        # replace with new values (preserve header length)
-                        new_row = [
-                            new_name or name,
-                            new_bottle if new_bottle is not None else (row[1] if len(row) > 1 else ''),
-                            new_location if new_location is not None else (row[2] if len(row) > 2 else ''),
-                            new_phone if new_phone is not None else (row[3] if len(row) > 3 else ''),
-                        ]
-                        rows.append(new_row)
-                        updated = True
-                    else:
-                        rows.append(row)
+            if not orig_name:
+                return JsonResponse({'status': 'error', 'message': 'Orig name required.'})
 
-            if updated:
-                # Write back CSV (overwrite)
-                with open(csv_path, 'w', encoding='utf-8', newline='') as f:
-                    writer = csv.writer(f)
-                    if headers:
-                        writer.writerow(headers)
-                    for r in rows:
-                        writer.writerow(r)
-                return JsonResponse({'status': 'success'})
-            else:
+            try:
+                region_obj = Region.objects.get(name=orig_name)
+            except Region.DoesNotExist:
                 return JsonResponse({'status': 'not_found'})
+
+            if new_name:
+                region_obj.name = new_name
+                region_obj.save()
+
+            # We intentionally do not store bottle/location/phone on Region model (legacy CSV kept separately)
+            return JsonResponse({'status': 'success'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
@@ -263,34 +275,12 @@ def delete_region(request):
             if not name:
                 return JsonResponse({'status': 'error', 'message': "Hudud nomi kerak."})
 
-            csv_path = os.path.join(BASE_DIR, 'Volidam.csv')
-            if not os.path.exists(csv_path):
+            try:
+                region_obj = Region.objects.get(name=name)
+                region_obj.delete()
+                return JsonResponse({'status': 'success'})
+            except Region.DoesNotExist:
                 return JsonResponse({'status': 'not_found'})
-
-            rows = []
-            removed = False
-            with open(csv_path, 'r', encoding='utf-8') as f:
-                reader = csv.reader(f)
-                headers = next(reader, None)
-                for row in reader:
-                    row_name = row[0] if len(row) > 0 else ''
-                    if row_name == name:
-                        removed = True
-                        continue
-                    rows.append(row)
-
-            if not removed:
-                return JsonResponse({'status': 'not_found'})
-
-            # write back file
-            with open(csv_path, 'w', encoding='utf-8', newline='') as f:
-                writer = csv.writer(f)
-                if headers:
-                    writer.writerow(headers)
-                for r in rows:
-                    writer.writerow(r)
-
-            return JsonResponse({'status': 'success'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
@@ -314,7 +304,12 @@ def couriers_view(request):
     except Exception:
         couriers = []
 
-    return render(request, 'admin/couriers_clean.html', {'couriers': couriers})
+    # Pop any flash messages set by other views (add/edit/delete)
+    flash_message = request.session.pop('flash_message', None)
+    flash_type = request.session.pop('flash_type', None)
+
+    # Render the modern styled template with optional flash
+    return render(request, 'admin/couriers.html', {'couriers': couriers, 'flash_message': flash_message, 'flash_type': flash_type})
 
 
 def region_clients_api(request):
@@ -350,6 +345,26 @@ def region_clients_api(request):
         })
 
     return JsonResponse({'status': 'ok', 'clients': clients})
+
+
+def clients_positions_api(request):
+    """Return JSON list of all clients with lat/lon for admin map display."""
+    try:
+        qs = Client.objects.all()
+    except Exception:
+        qs = Client.objects.none()
+    items = []
+    for c in qs:
+        try:
+            lat = float(getattr(c, 'location_lat', 0) or 0)
+            lon = float(getattr(c, 'location_lon', 0) or 0)
+        except Exception:
+            lat = 0.0; lon = 0.0
+        # skip clients without a meaningful location
+        if lat == 0 and lon == 0:
+            continue
+        items.append({'id': c.id, 'full_name': c.full_name, 'phone': c.phone, 'lat': lat, 'lon': lon, 'region': getattr(c.region, 'name', None)})
+    return JsonResponse({'status': 'ok', 'clients': items})
 
 
 def clients_view(request):
@@ -439,13 +454,19 @@ def orders_view(request):
             'client_name': o.client.full_name,
             'phone': o.client.phone,
             'address': o_address,
-            'comment': o.client.note or o.client.last_order,
+            'lat': getattr(o.client, 'location_lat', None) if o.client else None,
+            'lon': getattr(o.client, 'location_lon', None) if o.client else None,
+            # prefer the comment attached to the order (client_note); fallback to client's profile note
+            'comment': (getattr(o, 'client_note', None) or (o.client.note if o.client else '')),
             'status': o.status,
             'status_label': s_label,
             'status_class': s_class,
             'courier': o.courier.full_name if o.courier else None,
             'bottles': o.bottle_count,
             'amount': int(o.debt_change) if getattr(o, 'debt_change', None) is not None else None,
+            # payment info (stored on Order when courier confirms delivery)
+            'payment_type': (lambda pt: ('Pul berdi (naqd)' if pt=='cash' else ('Qarz bo\'ldi' if pt=='debt' else ('Click/online' if pt=='click' else ''))))(getattr(o, 'payment_type', None)),
+            'payment_amount': int(o.payment_amount) if getattr(o, 'payment_amount', None) is not None else None,
         })
 
     # Top clients by number of orders
@@ -677,10 +698,14 @@ def add_courier(request):
 
         region_obj = None
         if region_id:
+            # Accept either an integer PK or a region name from CSV choices
             try:
                 region_obj = Region.objects.get(pk=int(region_id))
             except Exception:
-                region_obj = None
+                try:
+                    region_obj, _ = Region.objects.get_or_create(name=region_id)
+                except Exception:
+                    region_obj = None
 
         if full_name and phone:
             Courier.objects.create(full_name=full_name, phone=phone, region=region_obj, is_active=is_active)
@@ -688,8 +713,33 @@ def add_courier(request):
             request.session['flash_type'] = 'success'
             return redirect('couriers_view')
 
-    regions = Region.objects.order_by('name')
-    return render(request, 'admin/add_edit_courier_clean.html', {'regions': regions, 'action': 'add'})
+    # Build region choices: prefer DB Regions, but append unique CSV locations for convenience
+    # Build region choices: prefer CSV 'location' values first to avoid CSV-name pollution
+    try:
+        static_regions = read_csv_data()
+    except Exception:
+        static_regions = []
+    try:
+        db_regions = list(Region.objects.order_by('name'))
+    except Exception:
+        db_regions = []
+
+    seen = set()
+    region_choices = []
+    # prefer CSV locations (these are actual hudud names in Volidam.csv)
+    for r in static_regions:
+        loc = (r.get('location') or '').strip()
+        if loc and loc not in seen:
+            seen.add(loc)
+            region_choices.append({'value': loc, 'label': loc})
+    # then append DB regions that are not duplicates
+    for r in db_regions:
+        name = (r.name or '').strip()
+        if name and name not in seen:
+            seen.add(name)
+            region_choices.append({'value': str(r.id), 'label': name})
+
+    return render(request, 'admin/add_edit_courier_clean.html', {'region_choices': region_choices, 'action': 'add'})
 
 
 def edit_courier(request, courier_id):
@@ -713,7 +763,11 @@ def edit_courier(request, courier_id):
             try:
                 courier.region = Region.objects.get(pk=int(region_id))
             except Exception:
-                pass
+                try:
+                    region_obj, _ = Region.objects.get_or_create(name=region_id)
+                    courier.region = region_obj
+                except Exception:
+                    pass
 
         courier.is_active = True if request.POST.get('is_active') == 'on' else False
         courier.save()
@@ -722,8 +776,30 @@ def edit_courier(request, courier_id):
         request.session['flash_type'] = 'success'
         return redirect('couriers_view')
 
-    regions = Region.objects.order_by('name')
-    return render(request, 'admin/add_edit_courier_clean.html', {'regions': regions, 'courier': courier, 'action': 'edit'})
+    # Build region choices (same as add view)
+    try:
+        db_regions = list(Region.objects.order_by('name'))
+    except Exception:
+        db_regions = []
+    try:
+        static_regions = read_csv_data()
+    except Exception:
+        static_regions = []
+
+    seen = set()
+    region_choices = []
+    for r in db_regions:
+        name = (r.name or '').strip()
+        if name and name not in seen:
+            seen.add(name)
+            region_choices.append({'value': str(r.id), 'label': name})
+    for r in static_regions:
+        loc = (r.get('location') or '').strip()
+        if loc and loc not in seen:
+            seen.add(loc)
+            region_choices.append({'value': loc, 'label': loc})
+
+    return render(request, 'admin/add_edit_courier_clean.html', {'region_choices': region_choices, 'courier': courier, 'action': 'edit'})
 
 
 def delete_courier(request, courier_id):
@@ -742,10 +818,33 @@ def delete_courier(request, courier_id):
 def reports_view(request):
     # Financial report: static monthly revenue for 12 months (will become dynamic later)
     import json
-    # Static months (Uzbek short names)
-    labels = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']
-    # Static sample revenue values (in so'm or currency units)
-    data = [1200000, 1500000, 1100000, 1700000, 2000000, 1800000, 1600000, 1900000, 2100000, 2300000, 2200000, 2400000]
+    # Build last-12-months labels and compute revenue from Orders.payment_amount when available
+    labels = []
+    data = []
+    try:
+        today = datetime.date.today()
+        for i in range(11, -1, -1):
+            month_date = (today.replace(day=1) - datetime.timedelta(days=0)) - datetime.timedelta(days=30 * i)
+            # month label in Uzbek short form (approx)
+            labels.append(month_date.strftime('%b'))
+        # More robust per-month aggregation
+        data = []
+        for i in range(11, -1, -1):
+            # compute the first day of the month `i` months ago
+            ref = (today.replace(day=1) - datetime.timedelta(days=1)) - datetime.timedelta(days=30 * i)
+            year = ref.year
+            month = ref.month
+            # sum payment_amount for that month; treat None as 0
+            month_sum = Order.objects.filter(created_at__year=year, created_at__month=month).aggregate(total=Sum('payment_amount'))
+            total_val = month_sum.get('total') or 0
+            try:
+                total_int = int(total_val)
+            except Exception:
+                total_int = 0
+            data.append(total_int)
+    except Exception:
+        labels = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']
+        data = [0] * 12
 
     context = {
         'revenue_labels': labels,
@@ -772,7 +871,9 @@ def debtors_view(request):
     from django.utils import timezone
 
     title = 'Qarzdorlar'
-    clients_qs = Client.objects.filter(debt__gt=0).select_related('region')
+    # Exclude obvious test/sample names (e.g. names starting with 'Mijoz')
+    # so the debtors page doesn't show statically-added sample records.
+    clients_qs = Client.objects.filter(debt__gt=0).exclude(full_name__startswith='Mijoz').select_related('region')
     debtors = []
     now = timezone.now()
     # load static CSV mapping (phone -> csv name) to prefer CSV name when available
@@ -814,12 +915,23 @@ def debtors_view(request):
         if len(p) >= 6:
             csv_phone_by_last6[p[-6:]] = r.get('name')
 
-    # Static couriers (temporary). Will be dynamic later.
-    static_couriers = [
-        {'name': 'Oybek Kurye', 'phone': '+998901112233'},
-        {'name': 'Aziz Kurye', 'phone': '+998902223344'},
-        {'name': 'Dilorom Kurye', 'phone': '+998903334455'},
-    ]
+    # Prefer real couriers from DB; fallback to a small static list if none
+    try:
+        couriers_qs = list(Courier.objects.all())
+        if couriers_qs:
+            couriers_list = [{'name': c.full_name, 'phone': getattr(c, 'phone', '-') } for c in couriers_qs]
+        else:
+            couriers_list = [
+                {'name': 'Oybek Kurye', 'phone': '+998901112233'},
+                {'name': 'Aziz Kurye', 'phone': '+998902223344'},
+                {'name': 'Dilorom Kurye', 'phone': '+998903334455'},
+            ]
+    except Exception:
+        couriers_list = [
+            {'name': 'Oybek Kurye', 'phone': '+998901112233'},
+            {'name': 'Aziz Kurye', 'phone': '+998902223344'},
+            {'name': 'Dilorom Kurye', 'phone': '+998903334455'},
+        ]
 
     for c in clients_qs:
         last_order = Order.objects.filter(client=c).order_by('-created_at').first()
@@ -829,8 +941,8 @@ def debtors_view(request):
             courier_name = last_order.courier.full_name
             courier_phone = getattr(last_order.courier, 'phone', '-')
         else:
-            # pick a static courier deterministically by client id
-            sc = static_couriers[c.id % len(static_couriers)]
+            # pick a courier deterministically by client id from the DB-derived list
+            sc = couriers_list[c.id % len(couriers_list)]
             courier_name = sc['name']
             courier_phone = sc['phone']
         # determine status label
@@ -934,31 +1046,46 @@ def mark_debtor_paid(request, client_id):
 
 
 def inactive_clients_view(request):
-    """List clients who have not had an order for 10 or more days."""
-    # Return static sample data for testing: clients with no orders in last 10+ days
-    cutoff_days = 10
-    inactive = [
-        {
-            'client_id': 101,
-            'name': 'Rustam Ismoilov',
-            'phone': '+998901112233',
-            'last_order_date': '2025-11-28',
-            'days_since': 14,
-        },
-        {
-            'client_id': 102,
-            'name': 'Gulnora Abdullaeva',
-            'phone': '+998902223344',
-            'last_order_date': '2025-11-29',
-            'days_since': 13,
-        },
-        {
-            'client_id': 103,
-            'name': 'Javlon Mirzaev',
-            'phone': '+998903334455',
-            'last_order_date': '2025-11-25',
-            'days_since': 17,
-        },
-    ]
+    """List clients who have not had an order for `cutoff_days` or more.
 
-    return render(request, 'admin/inactive_clients.html', {'clients': inactive, 'cutoff_days': cutoff_days})
+    Default cutoff is 30 days, but can be overridden with ?cutoff=<days>.
+    """
+    from django.utils import timezone
+
+    try:
+        cutoff_days = int(request.GET.get('cutoff', 30))
+    except Exception:
+        cutoff_days = 30
+
+    cutoff_date = timezone.now() - datetime.timedelta(days=cutoff_days)
+
+    # Select clients whose last_order is null (never ordered) or older than cutoff
+    try:
+        qs = Client.objects.filter(Q(last_order__isnull=True) | Q(last_order__lte=cutoff_date)).order_by('last_order')[:100]
+    except Exception:
+        qs = Client.objects.none()
+
+    clients = []
+    now = timezone.now()
+    for c in qs:
+        if getattr(c, 'last_order', None):
+            try:
+                last_date = c.last_order.strftime('%Y-%m-%d')
+                days_since = (now.date() - c.last_order.date()).days
+            except Exception:
+                last_date = str(c.last_order)
+                days_since = None
+        else:
+            last_date = None
+            days_since = None
+
+        phone = c.phone or ''
+        clients.append({
+            'client_id': c.id,
+            'name': c.full_name,
+            'phone': phone,
+            'last_order_date': last_date,
+            'days_since': days_since,
+        })
+
+    return render(request, 'admin/inactive_clients.html', {'clients': clients, 'cutoff_days': cutoff_days})

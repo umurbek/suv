@@ -1,178 +1,242 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
-<div class="px-6 py-6">
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl md:text-3xl font-bold">Dashboard</h2>
-    </div>
-
-    <!-- top cards + chart + right sidebar -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- main column -->
-        <div class="lg:col-span-2 space-y-6">
-            <!-- Metrics cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Bugungi buyurtmalar</p>
-                        <p class="text-2xl md:text-3xl font-extrabold text-blue-600">{{ today_orders|default:0 }}</p>
-                        <p class="text-xs text-gray-400">Bugun qabul qilingan buyurtmalar</p>
-                    </div>
-                    <div class="text-3xl text-blue-400">📦</div>
+<div class="min-h-screen bg-[#050b15] text-slate-200 p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+            <div>
+                <h1 class="text-4xl font-black text-white tracking-tight flex items-center gap-3">
+                    Boshqaruv Paneli <span class="text-blue-500 text-2xl">v2025</span>
+                </h1>
+                <p class="text-slate-400 mt-1 font-medium">Xush kelibsiz, Admin. Tizim holati barqaror.</p>
+            </div>
+            <div class="flex items-center gap-4 bg-[#0f172a] p-2 rounded-2xl border border-white/5">
+                <div class="text-right hidden sm:block">
+                    <p class="text-sm font-bold text-white">Admin G'anisher</p>
+                    <p class="text-xs text-emerald-400">Online</p>
                 </div>
-
-                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Faol mijozlar</p>
-                        <p class="text-2xl md:text-3xl font-extrabold text-pink-600">{{ total_clients|default:0 }}</p>
-                        <p class="text-xs text-gray-400">Ro'yxatdagi jami mijozlar</p>
-                    </div>
-                    <div class="text-3xl text-pink-400">👥</div>
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                    <span class="text-xl">A</span>
                 </div>
+            </div>
+        </header>
 
-                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            <div class="group relative overflow-hidden bg-[#0f172a] p-6 rounded-3xl border border-white/5 hover:border-blue-500/50 transition-all duration-300">
+                <div class="relative z-10 flex justify-between items-start">
                     <div>
-                        <p class="text-sm text-gray-500">Kuryerlar (faol)</p>
-                        <p class="text-2xl md:text-3xl font-extrabold text-gray-900">{{ active_couriers|default:0 }}</p>
-                        <p class="text-xs text-gray-400">Hozir faol kuryerlar</p>
+                        <p class="text-slate-400 text-sm font-medium">Bugungi buyurtmalar</p>
+                        <h3 class="text-3xl font-bold text-white mt-1">{{ today_orders|default:0 }}</h3>
+                        <span class="inline-flex items-center mt-2 px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs font-bold">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                            12.5%
+                        </span>
                     </div>
-                    <div class="text-3xl text-green-400">🚚</div>
-                </div>
-
-                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Qarz`dorlar</p>
-                        <p class="text-2xl md:text-3xl font-extrabold text-red-500">{{ debtors|default:0 }}</p>
-                        <p class="text-xs text-gray-400">Qarzga tushgan mijozlar</p>
+                    <div class="p-3 bg-blue-500/10 rounded-2xl text-blue-500 group-hover:scale-110 transition-transform">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                     </div>
-                    <div class="text-3xl text-red-400">⚠️</div>
                 </div>
             </div>
 
-            <!-- Weekly chart -->
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-lg font-semibold mb-4">Haftalik Buyurtmalar Statistikasi</h3>
-                <div class="h-64">
-                    <canvas id="weeklyOrdersChart"></canvas>
+            <div class="group bg-[#0f172a] p-6 rounded-3xl border border-white/5 hover:border-orange-500/50 transition-all">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-slate-400 text-sm font-medium">Kutilmoqda</p>
+                        <h3 class="text-3xl font-bold text-white mt-1">{{ pending_count|default:0 }}</h3>
+                        <p class="text-xs text-orange-400 mt-2 font-semibold">Tezkorlik zarur</p>
+                    </div>
+                    <div class="p-3 bg-orange-500/10 rounded-2xl text-orange-500">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="group bg-[#0f172a] p-6 rounded-3xl border border-white/5 hover:border-emerald-500/50 transition-all">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-slate-400 text-sm font-medium">Faol kuryerlar</p>
+                        <h3 class="text-3xl font-bold text-white mt-1">{{ active_couriers|default:'0/0' }}</h3>
+                        <div class="w-24 h-1.5 bg-slate-800 rounded-full mt-4 overflow-hidden">
+                            <div class="bg-emerald-500 h-full w-[75%]"></div>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path></svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="group bg-[#0f172a] p-6 rounded-3xl border border-white/5 hover:border-indigo-500/50 transition-all">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-slate-400 text-sm font-medium">Bugungi daromad</p>
+                        <h3 class="text-3xl font-bold text-white mt-1 tracking-tight">{{ today_revenue|default:'0' }}</h3>
+                        <p class="text-xs text-indigo-400 mt-2 font-semibold">Valyuta: UZS</p>
+                    </div>
+                    <div class="p-3 bg-indigo-500/10 rounded-2xl text-indigo-500">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zM4.635 8.22a9.03 9.03 0 013.585-3.585M19.365 15.78a9.03 9.03 0 01-3.585 3.585"></path></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-8">
+                <div class="bg-[#0f172a] rounded-3xl p-6 border border-white/5 shadow-2xl">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-white">Savdo Dinamikasi</h3>
+                        <select id="chartRange" class="bg-slate-800 text-xs border-none rounded-lg focus:ring-blue-500">
+                            <option value="7">Oxirgi 7 kun</option>
+                            <option value="30">Oxirgi 30 kun</option>
+                        </select>
+                    </div>
+                    <div class="h-[300px] w-full">
+                        <canvas id="weeklyOrdersChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-[#0f172a] rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
+                    <div class="p-6 border-b border-white/5 flex justify-between items-center">
+                        <h3 class="text-xl font-bold text-white">Yangi buyurtmalar</h3>
+                        <button class="text-blue-500 text-sm font-semibold hover:underline">Hammasini ko'rish</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-white/5 text-slate-400 text-[10px] uppercase tracking-widest font-bold">
+                                    <th class="px-6 py-4">ID</th>
+                                    <th class="px-6 py-4">Mijoz</th>
+                                    <th class="px-6 py-4">Status</th>
+                                    <th class="px-6 py-4 text-right">Summa</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-white/5">
+                                {% for o in recent_orders %}
+                                <tr class="hover:bg-white/[0.02] transition-colors group">
+                                    <td class="px-6 py-4 font-mono text-blue-400">#{{ o.id }}</td>
+                                    <td class="px-6 py-4 text-white font-medium">{{ o.client_name|default:o.client }}</td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                            {{ o.status }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right text-emerald-400 font-bold">{{ o.total_display }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="px-6 py-10 text-center text-slate-500">Ma'lumotlar mavjud emas</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-8">
+                <div class="bg-[#0f172a] rounded-3xl p-6 border border-white/5">
+                    <h4 class="text-xl font-bold text-white mb-6">Top Mijozlar</h4>
+                    <div class="space-y-6">
+                        {% for c in top_clients %}
+                        <div class="flex items-center justify-between group">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center font-bold text-blue-400 border border-white/5 group-hover:scale-110 transition-transform">
+                                    {{ c.full_name|slice:':1'|upper }}
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-white leading-none">{{ c.full_name }}</p>
+                                    <p class="text-xs text-slate-500 mt-1">{{ c.region.name|default:'Shahar' }}</p>
+                                </div>
+                            </div>
+                            <div class="text-right text-xs">
+                                <span class="block font-bold text-blue-500">{{ c.orders_count }} buyurtma</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="bg-[#0f172a] rounded-3xl p-6 border border-white/5 bg-gradient-to-b from-[#0f172a] to-[#070c18]">
+                    <h4 class="text-xl font-bold text-white mb-6">Hududlar tahlili</h4>
+                    <div class="space-y-4">
+                        {% for r in region_stats %}
+                        <div>
+                            <div class="flex justify-between text-sm mb-2">
+                                <span class="text-slate-300 font-medium">{{ r.region }}</span>
+                                <span class="text-white font-bold">{{ r.total_orders }} ta</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                                <div class="bg-blue-500 h-full rounded-full" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
 
         </div>
-
-        <!-- right sidebar -->
-        <aside class="space-y-6">
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h4 class="font-semibold mb-4">Top Mijozlar</h4>
-                <ul class="space-y-3">
-                    {% if top_clients %}
-                        {% for c in top_clients %}
-                        <li class="flex items-center justify-between">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center">{{ c.full_name|slice:":1"|upper }}</div>
-                                <div>
-                                    <div class="font-medium">{{ c.full_name }}</div>
-                                    <div class="text-xs text-gray-400">—</div>
-                                </div>
-                            </div>
-                            <div class="text-sm font-semibold text-indigo-600">{{ c.orders_count }}</div>
-                        </li>
-                        {% endfor %}
-                    {% else %}
-                        {% for c in top_debtors %}
-                        <li class="flex items-center justify-between">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center">{{ c.full_name|slice:":1"|upper }}</div>
-                                <div>
-                                    <div class="font-medium">{{ c.full_name }}</div>
-                                    <div class="text-xs text-gray-400">
-                                        {% if c.region %}
-                                            {% if c.region.name %}{{ c.region.name }}{% else %}{{ c.region }}{% endif %}
-                                        {% else %}
-                                            —
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="text-sm font-semibold text-indigo-600">{{ c.debt }}</div>
-                        </li>
-                        {% empty %}
-                        <li class="text-gray-500">Top mijozlar topilmadi.</li>
-                        {% endfor %}
-                    {% endif %}
-                </ul>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h4 class="font-semibold mb-4">Eng ko'p yetkazgan kuryerlar</h4>
-                <ul class="space-y-3">
-                    {% if top_couriers %}
-                        {% for k in top_couriers %}
-                        <li class="flex items-center justify-between">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center">{{ k.full_name|slice:":1"|upper }}</div>
-                                <div>
-                                    <div class="font-medium">{{ k.full_name }}</div>
-                                    <div class="text-xs text-gray-400">Delivered: {{ k.delivered }}</div>
-                                </div>
-                            </div>
-                            <div class="text-sm font-semibold text-indigo-600">{{ k.delivered }}</div>
-                        </li>
-                        {% endfor %}
-                    {% else %}
-                        <li class="text-gray-500">Kuryerlar topilmadi.</li>
-                    {% endif %}
-                </ul>
-            </div>
-
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h4 class="font-semibold mb-4">Hududlar bo'yicha buyurtmalar</h4>
-                <ul class="space-y-2 text-sm text-gray-700">
-                    {% if region_stats %}
-                        {% for r in region_stats %}
-                        <li class="flex items-center justify-between">
-                            <div>{{ r.region }}</div>
-                            <div class="text-gray-500">{{ r.total_orders }} ta</div>
-                        </li>
-                        {% endfor %}
-                    {% else %}
-                        <li class="text-gray-500">Ma'lumot mavjud emas.</li>
-                    {% endif %}
-                </ul>
-            </div>
-        </aside>
     </div>
-
 </div>
 
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const canvas = document.getElementById('weeklyOrdersChart');
-    if (canvas) {
-        const ctx = canvas.getContext('2d');
-        const labels = {{ weekly_labels_json|safe }};
-        const dataPoints = {{ weekly_data_json|safe }};
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Buyurtmalar',
-                        data: dataPoints,
-                        backgroundColor: 'rgba(59,130,246,0.9)'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom' } },
-                scales: { x: { stacked: false }, y: { beginAtZero: true, title: { display: true, text: 'Soni' } } }
+    // 2025 Modern Chart Design
+    const ctx = document.getElementById('weeklyOrdersChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
+    gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+    // Prepare datasets for 7 and 30 day ranges (provided by view)
+    const weeklyLabels = {{ weekly_labels_json|safe }};
+    const weeklyData = {{ weekly_data_json|safe }};
+    const monthlyLabels = {{ monthly_labels_json|safe }};
+    const monthlyData = {{ monthly_data_json|safe }};
+
+    const chartConfig = {
+        type: 'line', // Chiziqli grafik zamonaviyroq ko'rinadi
+        data: {
+            labels: weeklyLabels,
+            datasets: [{
+                label: 'Buyurtmalar',
+                data: weeklyData,
+                fill: true,
+                backgroundColor: gradient,
+                borderColor: '#3b82f6',
+                borderWidth: 3,
+                tension: 0.4, // Silliq chiziqlar
+                pointRadius: 4,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#3b82f6'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } },
+                x: { grid: { display: false }, ticks: { color: '#64748b' } }
             }
-        });
-    }
+        }
+    };
+
+    const ordersChart = new Chart(ctx, chartConfig);
+
+    // Allow switching between 7 and 30 day views
+    const chartRange = document.getElementById('chartRange');
+    chartRange.addEventListener('change', function(e) {
+        const v = e.target.value;
+        if (v === '30') {
+            ordersChart.data.labels = monthlyLabels;
+            ordersChart.data.datasets[0].data = monthlyData;
+        } else {
+            ordersChart.data.labels = weeklyLabels;
+            ordersChart.data.datasets[0].data = weeklyData;
+        }
+        ordersChart.update();
+    });
 </script>
 {% endblock %}
-
 {% endblock %}

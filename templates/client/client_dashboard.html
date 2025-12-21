@@ -2,289 +2,361 @@
 
 {% block content %}
 
-<div class="max-w-md mx-auto px-4 pb-24">
-    <div class="flex items-center justify-between mb-4 pt-4">
-        <div class="flex items-center space-x-3">
-            <img src="/static/img/logo.png" alt="logo" class="h-8 w-8 object-contain" onerror="this.style.display='none'" />
-            <h2 class="text-xl font-bold">Mening Dashboard</h2>
-        </div>
-        <button id="quick-order-btn" class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-500 text-sm">Buyurtma berish</button>
-    </div>
-    <div class="text-xs text-gray-500 mb-3">Customer ID: {% if client and client.customer_id %}{{ client.customer_id }}{% else %}—{% endif %}</div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 space-y-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Baklashka balansi</p>
-                        <p class="text-2xl md:text-3xl font-extrabold text-blue-600">{{ metrics.bottle_balance|default:0 }}</p>
-                        <p class="text-xs text-gray-400">Hozirgi balans</p>
-                    </div>
-                    <div class="text-3xl text-blue-400">🧴</div>
-                </div>
-
-                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Qarz</p>
-                        <p class="text-2xl md:text-3xl font-extrabold text-red-500">{{ metrics.debt|default:0 }}</p>
-                        <p class="text-xs text-gray-400">Agar bo'lsa to'lang</p>
-                    </div>
-                    <div class="text-3xl text-red-400">💳</div>
-                </div>
-
-                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Oxirgi buyurtmalar</p>
-                        <p class="text-2xl md:text-3xl font-extrabold text-gray-900">{{ recent_orders|length }}</p>
-                        <p class="text-xs text-gray-400">So'nggi 10 ta</p>
-                    </div>
-                    <div class="text-3xl text-green-400">🧾</div>
-                </div>
-
-                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Holat</p>
-                        <p class="text-2xl md:text-3xl font-extrabold text-indigo-600">Aktiv</p>
-                        <p class="text-xs text-gray-400">Profil holati</p>
-                    </div>
-                    <div class="text-3xl text-indigo-400">✅</div>
-                </div>
-            </div>
-
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-lg font-semibold mb-4">So'nggi Buyurtmalar</h3>
-                <div class="space-y-3">
-                    {% for o in recent_orders %}
-                    <div class="flex items-center justify-between p-3 border rounded">
-                        <div>
-                            <div class="font-medium">#{{ o.id }}</div>
-                            <div class="text-xs text-gray-400">{{ o.created_at }}</div>
-                            {% if o.note %}
-                            <div class="text-xs text-gray-600 mt-1">{{ o.note }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="text-sm text-gray-700">{{ o.bottles }} ta — {{ o.status }}</div>
-                    </div>
-                    {% empty %}
-                    <div class="text-gray-500">Buyurtma topilmadi.</div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- Weekly chart removed for client view (admin only) -->
-
-        </div>
-
-        <aside class="space-y-6">
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h4 class="font-semibold mb-4">Profil</h4>
-                <div class="space-y-2">
-                    <div class="text-sm text-gray-700">Ism: <strong>{{ client.first_name }} {{ client.last_name }}</strong></div>
-                    <div class="text-sm text-gray-700">Telefon: <strong>{{ client.phone }}</strong></div>
-                    <div class="text-sm text-gray-700">Manzil: <strong>{% if client.region %}{{ client.region.name }}{% endif %}</strong></div>
-                </div>
-                <div class="mt-4">
-                    <a href="/client_panel/profile/" class="inline-block px-3 py-2 bg-blue-500 text-white rounded">Profilni tahrirlash</a>
-                </div>
-            </div>
-
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h4 class="font-semibold mb-4">Yordam</h4>
-                <p class="text-sm text-gray-500">Savol yoki texnik muammo bo'lsa, biz bilan bog'laning.</p>
-                <div class="mt-3"><a href="/client_panel/contact_admin/" class="text-blue-600">Admin bilan bog'lanish</a></div>
-            </div>
-        </aside>
-    </div>
-
+<div class="fixed inset-0 -z-10 bg-[#0f172a]">
+    <div class="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+    <div class="absolute top-0 -right-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+    <div class="absolute -bottom-8 left-20 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
 </div>
 
-{# expose default client values and regions to JS #}
+<div class="min-h-screen text-white font-sans selection:bg-blue-500 selection:text-white">
+    
+    <div class="sticky top-0 z-40 backdrop-blur-xl bg-slate-900/30 border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="relative group cursor-pointer">
+                    <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full blur opacity-50 group-hover:opacity-100 transition duration-200"></div>
+                    <img src="/static/img/logo.png" alt="logo" class="relative h-10 w-10 object-contain rounded-full bg-slate-900 p-1" onerror="this.style.display='none'" />
+                </div>
+                <h2 class="text-xl font-bold tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-blue-200 to-white">
+                    {{ T.my_dashboard|default:'Dashboard' }}
+                </h2>
+            </div>
+            <button id="quick-order-btn" class="relative inline-flex items-center justify-center px-6 py-2 overflow-hidden font-medium text-white transition duration-300 ease-out border border-blue-500/30 rounded-full shadow-md group">
+                <span class="absolute inset-0 flex items-center justify-center w-full h-full text-white duration-300 -translate-x-full bg-blue-600 group-hover:translate-x-0 ease">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                </span>
+                <span class="absolute flex items-center justify-center w-full h-full text-blue-100 transition-all duration-300 transform group-hover:translate-x-full ease">{{ T.quick_order|default:'Buyurtma' }}</span>
+                <span class="relative invisible">{{ T.quick_order|default:'Buyurtma' }}</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 pb-28 pt-6">
+        <div class="text-xs text-slate-400 mb-6 font-mono tracking-wider ml-1">ID: {% if client and client.customer_id %}<span class="text-blue-400">{{ client.customer_id }}</span>{% else %}—{% endif %}</div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-8">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                    <div class="group relative bg-white/5 backdrop-blur-2xl border border-white/10 p-5 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:bg-white/10 transition-all duration-300 hover:-translate-y-1">
+                        <div class="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity text-4xl grayscale group-hover:grayscale-0">🧴</div>
+                        <p class="text-sm text-slate-400 font-medium">{{ T.bottle_balance|default:'Baklashka' }}</p>
+                        <p class="text-3xl font-bold text-blue-400 mt-1 drop-shadow-lg">{{ metrics.bottle_balance|default:0 }}</p>
+                        <div class="w-full bg-slate-700/50 h-1 mt-4 rounded-full overflow-hidden">
+                            <div class="bg-blue-500 h-1 rounded-full" style="width: 60%"></div>
+                        </div>
+                    </div>
+
+                    <div class="group relative bg-white/5 backdrop-blur-2xl border border-white/10 p-5 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:bg-white/10 transition-all duration-300 hover:-translate-y-1">
+                        <div class="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity text-4xl grayscale group-hover:grayscale-0">💳</div>
+                        <p class="text-sm text-slate-400 font-medium">{{ T.debt|default:'Qarz' }}</p>
+                        <p class="text-3xl font-bold text-red-400 mt-1 drop-shadow-lg">{{ metrics.debt|default:0 }}</p>
+                        <p class="text-[10px] text-slate-500 mt-2 uppercase tracking-wide">{{ T.pay_if_any|default:"To'lov kutilmoqda" }}</p>
+                    </div>
+
+                    <div class="group relative bg-white/5 backdrop-blur-2xl border border-white/10 p-5 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:bg-white/10 transition-all duration-300 hover:-translate-y-1">
+                        <div class="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity text-4xl grayscale group-hover:grayscale-0">🧾</div>
+                        <p class="text-sm text-slate-400 font-medium">{{ T.recent_orders_label|default:'Buyurtmalar' }}</p>
+                        <p class="text-3xl font-bold text-emerald-400 mt-1 drop-shadow-lg">{{ recent_orders|length }}</p>
+                        <p class="text-[10px] text-slate-500 mt-2 uppercase tracking-wide">{{ T.last_10|default:"So'nggi 10 ta" }}</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="relative group">
+                        <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+                        <div class="relative flex items-center bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-1">
+                            <svg class="w-6 h-6 text-slate-400 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M16.65 16.65A7 7 0 1 0 6 6a7 7 0 0 0 10.65 10.65z"/></svg>
+                            <input id="search" type="search" placeholder="{{ T.search_placeholder|default:'Mahsulot qidirish...' }}" class="w-full bg-transparent border-none text-white placeholder-slate-500 focus:ring-0 py-3 px-3">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-6 overflow-x-auto pb-4 pt-2 no-scrollbar">
+                        <div class="flex-none text-center group cursor-pointer">
+                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                                <span class="text-2xl filter drop-shadow-md">🍶</span>
+                            </div>
+                            <div class="text-[11px] mt-2 text-slate-300 font-medium tracking-wide uppercase">{{ T.category_mineral|default:'Mineral' }}</div>
+                        </div>
+                        <div class="flex-none text-center group cursor-pointer">
+                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(99,102,241,0.3)]">
+                                <span class="text-2xl filter drop-shadow-md">🧊</span>
+                            </div>
+                            <div class="text-[11px] mt-2 text-slate-300 font-medium tracking-wide uppercase">{{ T.category_chilled|default:'Muzdek' }}</div>
+                        </div>
+                        <div class="flex-none text-center group cursor-pointer">
+                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 border border-pink-500/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(236,72,153,0.3)]">
+                                <span class="text-2xl filter drop-shadow-md">🥤</span>
+                            </div>
+                            <div class="text-[11px] mt-2 text-slate-300 font-medium tracking-wide uppercase">{{ T.category_soft|default:'Ichimlik' }}</div>
+                        </div>
+                        <div class="flex-none text-center group cursor-pointer">
+                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                                <span class="text-2xl filter drop-shadow-md">💧</span>
+                            </div>
+                            <div class="text-[11px] mt-2 text-slate-300 font-medium tracking-wide uppercase">{{ T.category_detox|default:'Detox' }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="products" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="group relative bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-3xl p-4 transition-all duration-300 hover:bg-slate-800/60 hover:border-white/20 hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]" data-name="Mineral water" data-price="5000" data-img="/static/img/water-bottle.png">
+                        <div class="absolute top-3 right-3 bg-blue-500/20 text-blue-300 text-[10px] px-2 py-0.5 rounded-full border border-blue-500/20">Best</div>
+                        <div class="h-32 mb-4 flex items-center justify-center relative">
+                            <div class="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
+                            <img src="/static/img/water-bottle.png" alt="Mineral" class="h-28 object-contain relative z-10 drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500" onerror="this.style.display='none'">
+                        </div>
+                        <div class="space-y-1">
+                            <div class="font-bold text-slate-200">Mineral water</div>
+                            <div class="text-xs text-blue-400 font-mono">5 000 UZS</div>
+                        </div>
+                        <button class="open-product w-full mt-4 bg-white/5 hover:bg-blue-600 border border-white/10 hover:border-blue-500 text-white text-sm py-2.5 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 group-hover:shadow-lg hover:shadow-blue-500/25">
+                            <span>Savatga</span>
+                            <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                    </div>
+
+                    <div class="group relative bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-3xl p-4 transition-all duration-300 hover:bg-slate-800/60 hover:border-white/20 hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]" data-name="Chilled water" data-price="7000" data-img="/static/img/chilled.png">
+                        <div class="h-32 mb-4 flex items-center justify-center relative">
+                             <div class="absolute inset-0 bg-indigo-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
+                            <img src="/static/img/chilled.png" alt="Chilled" class="h-28 object-contain relative z-10 drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500" onerror="this.style.display='none'">
+                        </div>
+                        <div class="space-y-1">
+                            <div class="font-bold text-slate-200">Chilled water</div>
+                            <div class="text-xs text-indigo-400 font-mono">7 000 UZS</div>
+                        </div>
+                        <button class="open-product w-full mt-4 bg-white/5 hover:bg-indigo-600 border border-white/10 hover:border-indigo-500 text-white text-sm py-2.5 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2">
+                            <span>Savatga</span>
+                            <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                    </div>
+
+                     <div class="group relative bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-3xl p-4 transition-all duration-300 hover:bg-slate-800/60 hover:border-white/20 hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]" data-name="Detox water" data-price="6500" data-img="/static/img/detox.png">
+                        <div class="h-32 mb-4 flex items-center justify-center relative">
+                             <div class="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
+                            <img src="/static/img/detox.png" alt="Detox" class="h-28 object-contain relative z-10 drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500" onerror="this.style.display='none'">
+                        </div>
+                        <div class="space-y-1">
+                            <div class="font-bold text-slate-200">Detox water</div>
+                            <div class="text-xs text-emerald-400 font-mono">6 500 UZS</div>
+                        </div>
+                        <button class="open-product w-full mt-4 bg-white/5 hover:bg-emerald-600 border border-white/10 hover:border-emerald-500 text-white text-sm py-2.5 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2">
+                            <span>Savatga</span>
+                             <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                    </div>
+
+                     <div class="group relative bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-3xl p-4 transition-all duration-300 hover:bg-slate-800/60 hover:border-white/20 hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]" data-name="Soft drinks" data-price="8000" data-img="/static/img/soft.png">
+                        <div class="h-32 mb-4 flex items-center justify-center relative">
+                             <div class="absolute inset-0 bg-pink-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
+                            <img src="/static/img/soft.png" alt="Soft" class="h-28 object-contain relative z-10 drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500" onerror="this.style.display='none'">
+                        </div>
+                        <div class="space-y-1">
+                            <div class="font-bold text-slate-200">Soft drinks</div>
+                            <div class="text-xs text-pink-400 font-mono">8 000 UZS</div>
+                        </div>
+                        <button class="open-product w-full mt-4 bg-white/5 hover:bg-pink-600 border border-white/10 hover:border-pink-500 text-white text-sm py-2.5 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2">
+                            <span>Savatga</span>
+                            <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="space-y-6">
+                <div class="bg-slate-900/40 backdrop-blur-xl border border-white/10 p-6 rounded-3xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                    <h3 class="text-lg font-bold mb-4 text-white flex items-center">
+                        <span class="bg-blue-500/20 text-blue-300 p-1.5 rounded-lg mr-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></span>
+                        {{ T.recent_orders|default:"So'nggi Tarix" }}
+                    </h3>
+                    <div class="space-y-3 max-h-96 overflow-y-auto pr-1 custom-scrollbar">
+                        {% for o in recent_orders %}
+                        <div class="group flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                            <div>
+                                <div class="font-mono text-xs text-blue-300">#{{ o.id }}</div>
+                                <div class="text-[10px] text-slate-400 mt-0.5">{{ o.created_at }}</div>
+                                {% if o.note %}
+                                <div class="text-[10px] text-slate-500 mt-1 italic">{{ o.note|truncatechars:20 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-sm">{{ o.bottles }} ta</div>
+                                <div class="text-[10px] px-2 py-0.5 rounded-full inline-block mt-1 
+                                    {% if o.status == 'completed' %}bg-emerald-500/20 text-emerald-300
+                                    {% elif o.status == 'pending' %}bg-yellow-500/20 text-yellow-300
+                                    {% else %}bg-slate-700 text-slate-400{% endif %}">
+                                    {{ o.status }}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-slate-500 text-center py-4 text-sm">Hozircha buyurtmalar yo'q.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-slate-900/80 to-slate-800/80 backdrop-blur-xl border border-white/10 p-6 rounded-3xl">
+                    <h4 class="font-bold mb-4 text-slate-200">Profil</h4>
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs">👤</div>
+                            <div class="text-sm text-slate-300">{{ client.first_name }} {{ client.last_name }}</div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs">📞</div>
+                            <div class="text-sm text-slate-300">{{ client.phone }}</div>
+                        </div>
+                    </div>
+                    <a href="/client_panel/profile/" class="block text-center mt-6 w-full py-2 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-xs text-slate-300 transition-colors">Sozlamalar</a>
+                </div>
+            </aside>
+        </div>
+    </div>
+</div>
+
+<div class="fixed inset-x-0 bottom-6 z-50 flex justify-center lg:hidden pointer-events-none">
+    <div class="bg-slate-900/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.5)] px-6 py-3 pointer-events-auto flex items-center space-x-8">
+        <a href="/client_panel/dashboard/" class="flex flex-col items-center text-blue-400 transition transform hover:-translate-y-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M13 5v6h6"/></svg>
+        </a>
+        
+        <button id="mobile-order-btn" class="relative -top-6 bg-gradient-to-r from-blue-600 to-cyan-500 p-4 rounded-full shadow-lg shadow-blue-500/40 border-4 border-slate-900 transform transition active:scale-95 hover:scale-110">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        </button>
+
+        <a href="/client_panel/profile/" class="flex flex-col items-center text-slate-400 hover:text-white transition transform hover:-translate-y-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        </a>
+    </div>
+</div>
+
+{# Expose variables #}
 <script>
 const DEFAULT_CLIENT_NAME = "{{ client.first_name|default:''|escapejs }}";
 const DEFAULT_CLIENT_PHONE = "{{ client.phone|default:''|escapejs }}";
 const REGIONS = {{ regions_json|safe }};
 </script>
 
-<!-- categories + search -->
-<div class="px-4">
-    <div class="flex items-center space-x-3 overflow-x-auto pb-3">
-        <div class="flex-none text-center">
-            <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">🍶</div>
-            <div class="text-xs mt-1">Mineral</div>
-        </div>
-        <div class="flex-none text-center">
-            <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">🧊</div>
-            <div class="text-xs mt-1">Chilled</div>
-        </div>
-        <div class="flex-none text-center">
-            <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">🥤</div>
-            <div class="text-xs mt-1">Soft</div>
-        </div>
-        <div class="flex-none text-center">
-            <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">💧</div>
-            <div class="text-xs mt-1">Detox</div>
-        </div>
-    </div>
-
-    <div class="relative mb-4">
-        <input id="search" type="search" placeholder="Qidirish..." class="w-full border rounded-xl p-3 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-200">
-        <svg class="w-5 h-5 text-gray-400 absolute left-3 top-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M16.65 16.65A7 7 0 1 0 6 6a7 7 0 0 0 10.65 10.65z"/></svg>
-    </div>
-</div>
-
-<!-- product grid -->
-<div id="products" class="px-4 grid grid-cols-2 gap-3">
-    <!-- sample cards -->
-    <div class="bg-white rounded-xl p-3 shadow hover:shadow-lg transition" data-name="Mineral water" data-price="5000" data-img="/static/img/water-bottle.png">
-        <div class="card-img mb-3"><img src="/static/img/water-bottle.png" alt="Mineral" class="h-20 object-contain" onerror="this.style.display='none'"></div>
-        <div class="flex items-center justify-between">
-            <div>
-                <div class="font-semibold">Mineral water</div>
-                <div class="text-xs text-gray-500">5000 UZS</div>
-            </div>
-            <button class="open-product bg-blue-500 text-white px-3 py-1 rounded">Buy</button>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-xl p-3 shadow hover:shadow-lg transition" data-name="Chilled water" data-price="7000" data-img="/static/img/chilled.png">
-        <div class="card-img mb-3"><img src="/static/img/chilled.png" alt="Chilled" class="h-20 object-contain" onerror="this.style.display='none'"></div>
-        <div class="flex items-center justify-between">
-            <div>
-                <div class="font-semibold">Chilled water</div>
-                <div class="text-xs text-gray-500">7000 UZS</div>
-            </div>
-            <button class="open-product bg-blue-500 text-white px-3 py-1 rounded">Buy</button>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-xl p-3 shadow hover:shadow-lg transition" data-name="Detox water" data-price="6500" data-img="/static/img/detox.png">
-        <div class="card-img mb-3"><img src="/static/img/detox.png" alt="Detox" class="h-20 object-contain" onerror="this.style.display='none'"></div>
-        <div class="flex items-center justify-between">
-            <div>
-                <div class="font-semibold">Detox water</div>
-                <div class="text-xs text-gray-500">6500 UZS</div>
-            </div>
-            <button class="open-product bg-blue-500 text-white px-3 py-1 rounded">Buy</button>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-xl p-3 shadow hover:shadow-lg transition" data-name="Soft drinks" data-price="8000" data-img="/static/img/soft.png">
-        <div class="card-img mb-3"><img src="/static/img/soft.png" alt="Soft" class="h-20 object-contain" onerror="this.style.display='none'"></div>
-        <div class="flex items-center justify-between">
-            <div>
-                <div class="font-semibold">Soft drinks</div>
-                <div class="text-xs text-gray-500">8000 UZS</div>
-            </div>
-            <button class="open-product bg-blue-500 text-white px-3 py-1 rounded">Buy</button>
-        </div>
-    </div>
-</div>
-
-<div class="h-24"></div>
-
-<!-- bottom nav -->
-<div class="fixed inset-x-0 bottom-0 bg-white border-t p-3">
-    <div class="max-w-md mx-auto flex items-center justify-between">
-        <a href="/client_panel/dashboard/" class="flex flex-col items-center text-gray-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M13 5v6h6"/></svg>
-            <span class="text-xs">Home</span>
-        </a>
-        <a href="/client_panel/orders/" class="flex flex-col items-center text-blue-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4"/></svg>
-            <span class="text-xs">Cart</span>
-        </a>
-        <a href="/client_panel/profile/" class="flex flex-col items-center text-gray-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0 1 12 15c2.5 0 4.847.632 6.879 1.804M15 11a3 3 0 1 0-6 0 3 3 0 0 0 6 0z"/></svg>
-            <span class="text-xs">Profile</span>
-        </a>
-    </div>
-</div>
 {% block extra_scripts %}
-<script>
-// Ensure product modal and handlers are initialized after DOM is ready
-document.addEventListener('DOMContentLoaded', function(){
-    // product modal setup and event delegation
-    const UNIT_PRICE = 12000; // fixed price per bottle in UZS
+<style>
+    /* Custom Blob Animation */
+    @keyframes blob {
+        0% { transform: translate(0px, 0px) scale(1); }
+        33% { transform: translate(30px, -50px) scale(1.1); }
+        66% { transform: translate(-20px, 20px) scale(0.9); }
+        100% { transform: translate(0px, 0px) scale(1); }
+    }
+    .animate-blob {
+        animation: blob 7s infinite;
+    }
+    .animation-delay-2000 { animation-delay: 2s; }
+    .animation-delay-4000 { animation-delay: 4s; }
+    
+    /* Hide scrollbar for categories but keep functionality */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
 
-    // create modal element if not exists
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const UNIT_PRICE = 12000; 
+
+    // MODAL DIZAYNINI YANGILASH
     let modal = document.getElementById('product-modal');
     if (!modal){
         modal = document.createElement('div');
         modal.id = 'product-modal';
-        // ensure modal overlays bottom nav and FAB (high z-index) and places content above nav
-        modal.className = 'fixed inset-0 bg-black/40 hidden items-end sm:items-center justify-center z-50';
+        // Qorong'u fon va blur
+        modal.className = 'fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden items-end sm:items-center justify-center z-[60] p-4 transition-opacity duration-300';
         modal.innerHTML = `
-            <div class="w-full max-w-md bg-white rounded-t-2xl p-4 pb-24 sm:pb-8 shadow-2xl">
-                <div class="flex items-start justify-between">
+            <div class="w-full max-w-md bg-[#1e293b]/90 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden transform transition-all scale-100">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="flex items-start justify-between relative z-10">
                     <div>
-                        <div id="pm-name" class="font-semibold text-lg">Product</div>
-                        <div id="pm-price" class="text-sm text-gray-500">Price</div>
+                        <div id="pm-name" class="font-bold text-2xl text-white tracking-tight">Product</div>
+                        <div id="pm-price" class="text-sm text-blue-400 font-mono mt-1">Price</div>
                     </div>
-                    <button id="pm-close" class="text-gray-500">✕</button>
+                    <button id="pm-close" class="bg-white/5 hover:bg-white/10 rounded-full p-2 text-slate-400 hover:text-white transition">✕</button>
                 </div>
-                <div class="mt-3 flex items-center space-x-3">
-                    <img id="pm-img" src="" class="w-28 h-28 bg-blue-50 rounded-lg object-contain" />
-                    <div class="flex-1">
-                        <div class="text-sm text-gray-600 mb-2">Nechta bouteille kerak?</div>
-                        <div class="flex items-center space-x-2 mb-3">
-                            <button id="pm-decr" class="px-3 py-1 border rounded">-</button>
-                            <input id="pm-qty" type="number" min="1" step="1" value="1" class="w-24 text-center p-1 border rounded" />
-                            <button id="pm-incr" class="px-3 py-1 border rounded">+</button>
+                
+                <div class="mt-6 flex items-center space-x-5 relative z-10">
+                    <div class="relative">
+                        <div class="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
+                        <img id="pm-img" src="" class="w-24 h-24 object-contain relative z-10 drop-shadow-lg" />
+                    </div>
+                    
+                    <div class="flex-1 space-y-4">
+                        <div class="flex items-center bg-slate-900/50 rounded-xl p-1 border border-white/5">
+                            <button id="pm-decr" class="w-10 h-10 flex items-center justify-center text-xl text-white hover:bg-white/10 rounded-lg transition">-</button>
+                            <input id="pm-qty" type="number" min="1" step="1" value="1" class="flex-1 bg-transparent text-center text-white font-bold focus:outline-none" />
+                            <button id="pm-incr" class="w-10 h-10 flex items-center justify-center text-xl text-white hover:bg-white/10 rounded-lg transition">+</button>
                         </div>
-                        <div class="text-sm text-gray-700">Narx: <span id="pm-unit-price">0</span> UZS / ta</div>
-                        <div class="text-lg font-semibold mt-2">Jami: <span id="pm-total-price">0</span> UZS</div>
-                        <div class="mt-3">
-                            <label for="pm-message" class="text-sm text-gray-600">Qo'shimcha xabar (masalan: sizga qulay vaqt yoki eslatma)</label>
-                            <textarea id="pm-message" rows="3" class="w-full mt-1 p-2 border rounded" placeholder="Masalan: Ertalab 9-10 orasida yetkazib bering"></textarea>
+                        
+                        <div>
+                           <div class="text-xs text-slate-400">Jami hisob:</div>
+                           <div class="text-xl font-bold text-white"><span id="pm-total-price">0</span> UZS</div>
                         </div>
                     </div>
                 </div>
-                <div class="mt-4">
-                    <button id="pm-order" class="w-full bg-blue-600 text-white py-3 rounded-lg">Buyurtma tasdiqlash</button>
+
+                <div class="mt-6 relative z-10">
+                     <textarea id="pm-message" rows="2" class="w-full bg-slate-900/50 border border-white/10 rounded-xl p-3 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition" placeholder="Izoh (ixtiyoriy)..."></textarea>
+                </div>
+
+                <div class="mt-6 relative z-10">
+                    <button id="pm-order" class="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/25 transition-all transform hover:-translate-y-0.5 active:scale-95">
+                        Buyurtma berish
+                    </button>
                 </div>
             </div>`;
-        document.body.appendChild(modal);                                                                                                                                                                                                    
+        document.body.appendChild(modal);                                                                                                                                                                                                                                   
     }
 
     function formatNumber(x){ return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00A0"); }
 
-    function updatePriceDisplays(){                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
-        const qty = Math.max(1, parseInt(document.getElementById('pm-qty').value||1));                                                                                                                                                                                                                                                                  
+    function updatePriceDisplays(){                                                                                                                                                                                                                                                              
+        const qty = Math.max(1, parseInt(document.getElementById('pm-qty').value||1));                                                                                                                                                                                                
         const unit = UNIT_PRICE;
-        const total = qty * unit;                                                                                                                   
-        document.getElementById('pm-unit-price').innerText = formatNumber(unit);
-        document.getElementById('pm-total-price').innerText = formatNumber(total);                                                                                                                                                                                                                                                                                                          
+        const total = qty * unit;                                                           
+        // document.getElementById('pm-unit-price').innerText = formatNumber(unit); // Bu qatorni olib tashladim, modalda ortiqcha joy egallamasligi uchun
+        document.getElementById('pm-total-price').innerText = formatNumber(total);                                                                                                                                                                                            
     }
 
-    // small toast helper: shows a transient message that auto-hides after `ms` milliseconds
     function showToast(msg, ms){
         try{
             ms = ms || 2000;
             const t = document.createElement('div');
-            t.className = 'fixed top-6 left-1/2 -translate-x-1/2 bg-black text-white px-4 py-2 rounded shadow opacity-0 transition-opacity';
-            t.style.zIndex = 9999;
-            t.innerText = msg;
+            // Toast dizayni - Glassmorphism
+            t.className = 'fixed top-6 left-1/2 -translate-x-1/2 bg-slate-800/90 backdrop-blur-md border border-white/10 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center space-x-2 z-[100] transition-all transform scale-90 opacity-0';
+            t.innerHTML = `<span class="text-green-400">✓</span><span>${msg}</span>`;
             document.body.appendChild(t);
-            // force reflow then fade in
-            void t.offsetWidth; t.style.opacity = '0.95';
-            setTimeout(()=>{ t.style.opacity = '0'; setTimeout(()=> t.remove(), 300); }, ms);
+            requestAnimationFrame(() => {
+                t.style.transform = 'translate(-50%, 0) scale(1)';
+                t.style.opacity = '1';
+            });
+            setTimeout(()=>{ 
+                t.style.opacity = '0'; 
+                t.style.transform = 'translate(-50%, -20px) scale(0.9)';
+                setTimeout(()=> t.remove(), 300); 
+            }, ms);
         }catch(e){ console.error('toast error', e); }
     }
-                                                                                                                                            
+                                                                                                        
     function openModalForCard(card){
         const name = card.dataset.name || '';
         const price = card.dataset.price || '';
         const img = card.dataset.img || '';
         document.getElementById('pm-name').innerText = name;
-        document.getElementById('pm-price').innerText = formatNumber(UNIT_PRICE) + ' UZS';
+        document.getElementById('pm-price').innerText = formatNumber(UNIT_PRICE) + ' UZS / dona';
         const imgel = document.getElementById('pm-img'); imgel.src = img; imgel.onerror = function(){ this.style.display='none'; };
         document.getElementById('pm-qty').value = '1';
         updatePriceDisplays();
         modal.classList.remove('hidden'); modal.classList.add('flex');
     }
 
-    // delegate clicks for product open buttons and quick order
+    // Logic for clicks remains same, just ensuring selectors match
     document.body.addEventListener('click', function(ev){
         const btn = ev.target.closest('.open-product');
         if (btn){
@@ -292,29 +364,30 @@ document.addEventListener('DOMContentLoaded', function(){
             if (card) openModalForCard(card);
             return;
         }
-        const quick = ev.target.closest('#quick-order-btn') || ev.target.closest('#mobile-order-btn') || ev.target.closest('#fab-order-btn');
+        const quick = ev.target.closest('#quick-order-btn') || ev.target.closest('#mobile-order-btn');
         if (quick){
             const first = document.querySelector('#products > div');
             if (first) openModalForCard(first);
             else { document.getElementById('products')?.scrollIntoView({behavior:'smooth'}); }
             return;
         }
-        if (ev.target.closest('#pm-close')){ modal.classList.add('hidden'); modal.classList.remove('flex'); return; }
+        if (ev.target.closest('#pm-close') || ev.target === modal){ modal.classList.add('hidden'); modal.classList.remove('flex'); return; }
         if (ev.target.closest('#pm-incr')){ const q = document.getElementById('pm-qty'); q.value = Math.max(1, parseInt(q.value||1)+1); updatePriceDisplays(); return; }
         if (ev.target.closest('#pm-decr')){ const q = document.getElementById('pm-qty'); q.value = Math.max(1, parseInt(q.value||1)-1); updatePriceDisplays(); return; }
-        if (ev.target.closest('#pm-qty')){ /* noop - input change handled below */ }
+        
+        // Buyurtma yuborish logikasi (o'zgarishsiz qoldi, faqat UI yangilandi)
         if (ev.target.closest('#pm-order')){
             const orderBtn = document.getElementById('pm-order');
             const productName = document.getElementById('pm-name').innerText;
             const qty = document.getElementById('pm-qty').value || '1';
             const message = (document.getElementById('pm-message') && document.getElementById('pm-message').value) ? document.getElementById('pm-message').value.trim() : '';
-            if (!/^[0-9]+$/.test(String(qty)) || parseInt(qty) <= 0){ showToast('Iltimos, nechta kerakligini raqam bilan kiriting (1 yoki undan katta).', 2000); return; }
+            
+            if (!/^[0-9]+$/.test(String(qty)) || parseInt(qty) <= 0){ showToast('Miqdorni to\'g\'ri kiriting', 2000); return; }
 
-            // prevent double submit
             if (orderBtn.dataset.submitting === '1') return;
             orderBtn.dataset.submitting = '1';
-            const origText = orderBtn.innerText;
-            orderBtn.innerText = 'Yuborilmoqda...';
+            const origText = orderBtn.innerHTML;
+            orderBtn.innerHTML = '<svg class="animate-spin h-5 w-5 text-white mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
             orderBtn.disabled = true;
 
             const sendOrder = async (lat, lon) => {
@@ -323,45 +396,40 @@ document.addEventListener('DOMContentLoaded', function(){
                     const combinedNote = productName + (message ? ' — ' + message : '');
                     fd.append('bottles', qty);
                     fd.append('note', combinedNote);
-                    // include current client info as fallback in case session is missing
                     try{
                         if (typeof DEFAULT_CLIENT_NAME !== 'undefined' && DEFAULT_CLIENT_NAME) fd.append('name', DEFAULT_CLIENT_NAME);
                         if (typeof DEFAULT_CLIENT_PHONE !== 'undefined' && DEFAULT_CLIENT_PHONE) fd.append('phone', DEFAULT_CLIENT_PHONE);
                     }catch(e){}
                     if (lat !== undefined && lon !== undefined){ fd.append('lat', lat); fd.append('lon', lon); }
+                    
                     const resp = await fetch('/client_panel/api/create_order/', {method:'POST', body: fd, credentials: 'same-origin', headers: {'X-Requested-With':'XMLHttpRequest'}});
                     const data = await resp.json();
+                    
                     if (data && data.status === 'ok'){
-                        // show non-blocking toast confirmation that auto-hides after 2s
-                        showToast('Buyurtma qabul qilindi. Rahmat!', 2000);
+                        showToast('Buyurtma qabul qilindi!', 2000);
                         modal.classList.add('hidden'); modal.classList.remove('flex');
-                        // redirect after toast hides
                         setTimeout(function(){ window.location.href = '/client_panel/orders/'; }, 2000);
                     } else {
                         showToast(data.message || 'Xato yuz berdi', 3000);
                         orderBtn.dataset.submitting = '0';
                         orderBtn.disabled = false;
-                        orderBtn.innerText = origText;
+                        orderBtn.innerHTML = origText;
                     }
                 } catch(e){
-                    showToast('Tarmoq xatosi: '+e.message, 3000);
+                    showToast('Internet bilan aloqa yo\'q', 3000);
                     orderBtn.dataset.submitting = '0';
                     orderBtn.disabled = false;
-                    orderBtn.innerText = origText;
+                    orderBtn.innerHTML = origText;
                 }
             };
+            
             if (navigator.geolocation){ navigator.geolocation.getCurrentPosition(function(pos){ sendOrder(pos.coords.latitude, pos.coords.longitude); }, function(){ sendOrder(); }, {timeout:5000}); }
             else { sendOrder(); }
-            return;
         }
     });
 
-    // update total when qty input is manually changed
     document.addEventListener('input', function(e){ if (e.target && e.target.id === 'pm-qty'){ updatePriceDisplays(); } });
-
 });
 </script>
 {% endblock %}
 {% endblock %}
-</body>
-</html>

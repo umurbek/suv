@@ -4,47 +4,76 @@
 
 {% block content %}
 <div class="max-w-md mx-auto px-4 pb-24">
-  <div class="bg-blue-600 text-white rounded-lg p-6 shadow">
-    <div class="flex items-center space-x-4">
-      <div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl">👤</div>
-      <div>
-        <div class="font-semibold text-lg">{% if client and client.first_name %}{{ client.first_name }} {{ client.last_name }}{% else %}Profil{% endif %}</div>
-        <div class="text-sm opacity-90">{% if client and client.phone %}{{ client.phone }}{% endif %}</div>
-      </div>
+    <div class="bg-blue-800/50 backdrop-blur-md text-white rounded-xl p-6 shadow-xl border border-white/20">
+        <div class="flex items-center space-x-4">
+            <div class="w-16 h-16 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center text-3xl shadow-inner">
+                <i class="fa-solid fa-user-gear"></i>
+            </div>
+            <div>
+                <div class="font-bold text-xl drop-shadow-md">{% if client and client.first_name %}{{ client.first_name }} {{ client.last_name }}{% else %}Mening Profilim{% endif %}</div>
+                <div class="text-sm opacity-90 font-light">{% if client and client.phone %}<i class="fa-solid fa-phone mr-1"></i> {{ client.phone }}{% else %}Telefon raqam{% endif %}</div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div class="mt-4 bg-white p-4 rounded shadow">
-    <form id="profile-form">
-      <label class="block text-sm text-gray-600">Ism</label>
-      <input name="first_name" id="first_name" value="{% if client %}{{ client.first_name }}{% endif %}" class="w-full p-2 border rounded mb-3">
-      <label class="block text-sm text-gray-600">Familiya</label>
-      <input name="last_name" id="last_name" value="{% if client %}{{ client.last_name }}{% endif %}" class="w-full p-2 border rounded mb-3">
-      <label class="block text-sm text-gray-600">Telefon</label>
-      <input name="phone" id="phone" value="{% if client %}{{ client.phone }}{% endif %}" class="w-full p-2 border rounded mb-3">
-      
-        <label class="block text-sm text-gray-600">Hudud (tanlang)</label>
-        <input list="regions_list" id="region_name" class="w-full p-2 border rounded mb-2" placeholder="Hududni tanlang yoki qidirish" value="{% if client and client.region %}{{ client.region.name }}{% endif %}">
-        <datalist id="regions_list">
-          {% for r in regions %}
-          <option value="{{ r }}"></option>
-          {% endfor %}
-        </datalist>
-        <div class="flex items-center space-x-2 mb-2">
-          <label class="text-sm text-gray-700"><input type="checkbox" id="region_missing"> Hudud topilmadi (yangi hudud yozish)</label>
-        </div>
-        <div id="new_region_wrap" style="display:none;" class="mb-3">
-          <label class="block text-sm text-gray-600">Yangi hudud nomi</label>
-          <input id="new_region" class="w-full p-2 border rounded" placeholder="Yangi hudud nomi">
-        </div>
-        <!-- hidden address field that will be submitted (populated by JS) -->
-        <input type="hidden" name="address" id="address_hidden" value="{% if client and client.region %}{{ client.region.name }}{% endif %}">
-      <div class="flex space-x-2">
-        <button type="button" id="send-loc" class="flex-1 bg-blue-500 text-white p-2 rounded">Joy yuborish</button>
-        <button type="submit" class="flex-1 bg-green-500 text-white p-2 rounded">Saqlash</button>
-      </div>
-    </form>
-  </div>
+    <div class="mt-6 bg-white/30 backdrop-blur-md p-6 rounded-xl shadow-xl border border-white/20">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Ma'lumotlarni tahrirlash</h2>
+        <form id="profile-form">
+            
+            <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">
+                <i class="fa-solid fa-signature mr-1"></i> Ism
+            </label>
+            <input name="first_name" id="first_name" value="{% if client %}{{ client.first_name }}{% endif %}" 
+                   class="w-full p-3 border border-gray-300/50 rounded-lg mb-3 bg-white/70 focus:outline-none focus:border-blue-500 transition duration-200 shadow-inner">
+            
+            <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">
+                <i class="fa-solid fa-feather mr-1"></i> Familiya
+            </label>
+            <input name="last_name" id="last_name" value="{% if client %}{{ client.last_name }}{% endif %}" 
+                   class="w-full p-3 border border-gray-300/50 rounded-lg mb-3 bg-white/70 focus:outline-none focus:border-blue-500 transition duration-200 shadow-inner">
+            
+            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
+                <i class="fa-solid fa-mobile-screen-button mr-1"></i> Telefon
+            </label>
+            <input name="phone" id="phone" value="{% if client %}{{ client.phone }}{% endif %}" 
+                   class="w-full p-3 border border-gray-300/50 rounded-lg mb-3 bg-white/70 focus:outline-none focus:border-blue-500 transition duration-200 shadow-inner">
+            
+            <label for="region_name" class="block text-sm font-medium text-gray-700 mb-1">
+                <i class="fa-solid fa-map-pin mr-1"></i> Hudud (tanlang)
+            </label>
+                 <input list="regions_list" id="region_name" name="region_name" autocomplete="off" placeholder="Hududni tanlang yoki qidirish" 
+                     value="{% if client and client.region %}{{ client.region.name }}{% endif %}"
+                     class="w-full p-3 border border-gray-300/50 rounded-lg mb-2 bg-white/70 focus:outline-none focus:border-blue-500 transition duration-200 shadow-inner">
+            <datalist id="regions_list">
+                {% for r in regions %}
+                <option value="{{ r }}"></option>
+                {% endfor %}
+            </datalist>
+
+            <div class="flex items-center space-x-2 mb-2">
+                <input type="checkbox" id="region_missing" class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                <label for="region_missing" class="text-sm text-gray-700 select-none">Hudud topilmadi (yangi hudud yozish)</label>
+            </div>
+            
+            <div id="new_region_wrap" style="display:none;" class="mb-3">
+                <label for="new_region" class="block text-sm font-medium text-gray-700 mb-1">Yangi hudud nomi</label>
+                <input id="new_region" name="new_region" autocomplete="off" class="w-full p-3 border border-gray-300/50 rounded-lg bg-white/70 focus:outline-none focus:border-blue-500 transition duration-200 shadow-inner" placeholder="Yangi hudud nomi">
+            </div>
+
+            <input type="hidden" name="address" id="address_hidden" value="{% if client and client.region %}{{ client.region.name }}{% endif %}">
+            
+            <div class="flex space-x-3 mt-4">
+                <button type="button" id="send-loc" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg shadow-md transition duration-200 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-location-crosshairs"></i>
+                    <span>Joy yuborish</span>
+                </button>
+                <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg shadow-md transition duration-200 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Saqlash</span>
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}
 
@@ -52,56 +81,134 @@
 <script>
 // Send current geolocation to server and fill lat/lon
 document.getElementById('send-loc').addEventListener('click', function(){
-  if (!navigator.geolocation){ alert('Geolocation yo\'q'); return; }
-  navigator.geolocation.getCurrentPosition(async function(pos){
-    const lat = pos.coords.latitude, lon = pos.coords.longitude;
-    try{
-      const fd = new FormData(); fd.append('lat', lat); fd.append('lon', lon);
-      const resp = await fetch('/client_panel/api/update_profile/', {method:'POST', body: fd, credentials: 'same-origin', headers: {'X-Requested-With':'XMLHttpRequest'}});
-      const data = await resp.json();
-      if (data.status === 'ok'){
-        alert('Joy yuborildi va manzil avtomatik aniqlanadi — sahifa yangilanadi');
-        window.location.reload();
-      } else { alert(data.message || 'Xato'); }
-    } catch(e){ alert('Xatolik: ' + e.message); }
-  }, function(err){ alert('Joylanish xatosi: ' + err.message); });
+    if (!navigator.geolocation){ 
+        alert('Geolocation yo\'q'); 
+        return; 
+    }
+    
+    // Disable button during process
+    const sendLocBtn = this;
+    const originalContent = sendLocBtn.innerHTML;
+    sendLocBtn.disabled = true;
+    sendLocBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Aniqlanmoqda...';
+
+    navigator.geolocation.getCurrentPosition(async function(pos){
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        
+        try{
+            const fd = new FormData(); 
+            fd.append('lat', lat); 
+            fd.append('lon', lon);
+            
+            const resp = await fetch('/client_panel/api/update_profile/', {
+                method: 'POST', 
+                body: fd, 
+                credentials: 'same-origin', 
+                headers: {'X-Requested-With':'XMLHttpRequest'}
+            });
+            const data = await resp.json();
+            
+            if (data.status === 'ok'){
+                alert('Joy yuborildi va manzil avtomatik aniqlandi — sahifa yangilanadi');
+                window.location.reload();
+            } else { 
+                alert(data.message || 'Xato yuz berdi. Joy yuborilmadi.'); 
+            }
+        } catch(e){ 
+            alert('Xatolik: ' + e.message); 
+        } finally {
+             // Re-enable button
+            sendLocBtn.disabled = false;
+            sendLocBtn.innerHTML = originalContent;
+        }
+    }, function(err){ 
+        sendLocBtn.disabled = false;
+        sendLocBtn.innerHTML = originalContent;
+        alert('Joylanish xatosi: ' + err.message); 
+    }, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }); // Geolocation options
 });
+
+// Show temporary toast notification
+function showToast(message, type = 'success') {
+    const t = document.createElement('div');
+    const baseClass = 'fixed right-4 top-4 px-4 py-2 rounded-lg shadow-xl z-[100] transition-opacity duration-300';
+    
+    if (type === 'success') {
+        t.className = `${baseClass} bg-green-600 text-white`;
+        t.innerHTML = `<i class="fa-solid fa-check-circle mr-2"></i> ${message}`;
+    } else if (type === 'error') {
+        t.className = `${baseClass} bg-red-600 text-white`;
+        t.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2"></i> ${message}`;
+    }
+    
+    document.body.appendChild(t);
+    setTimeout(() => {
+        t.style.opacity = '0';
+        t.addEventListener('transitionend', () => t.remove());
+    }, 3000);
+}
+
 
 // Save profile
 document.getElementById('profile-form').addEventListener('submit', async function(ev){
-  ev.preventDefault();
-  // synchronize address field: if region_missing checked, use new_region value, otherwise use selected region_name
-  try{
-    const missing = document.getElementById('region_missing').checked;
-    const addr = missing ? (document.getElementById('new_region').value || '') : (document.getElementById('region_name').value || '');
-    document.getElementById('address_hidden').value = addr;
-  } catch(e){}
-  const fd = new FormData(this);
-  try{
-    const resp = await fetch('/client_panel/api/update_profile/', {method:'POST', body: fd, credentials: 'same-origin', headers: {'X-Requested-With':'XMLHttpRequest'}});
-    const data = await resp.json();
-    if (data.status === 'ok'){
-      // show unobtrusive toast instead of blocking alert
-      const t = document.createElement('div');
-      t.className = 'fixed right-4 top-4 bg-green-600 text-white px-4 py-2 rounded';
-      t.innerText = 'Profil saqlandi';
-      document.body.appendChild(t);
-      setTimeout(()=>{ window.location.href = '/client_panel/dashboard/'; }, 900);
-    } else { alert(data.message || 'Xato'); }
-  } catch(e){ alert('Xato: ' + e.message); }
+    ev.preventDefault();
+    
+    // Disable form submission and show loading
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalSubmitContent = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saqlanmoqda...';
+
+    // synchronize address field: if region_missing checked, use new_region value, otherwise use selected region_name
+    let addr = '';
+    try{
+        const missing = document.getElementById('region_missing').checked;
+        addr = missing ? (document.getElementById('new_region').value || '').trim() : (document.getElementById('region_name').value || '').trim();
+        document.getElementById('address_hidden').value = addr;
+    } catch(e){
+        console.error('Address sync error:', e);
+    }
+    
+    const fd = new FormData(this);
+    try{
+        const resp = await fetch('/client_panel/api/update_profile/', {
+            method: 'POST', 
+            body: fd, 
+            credentials: 'same-origin', 
+            headers: {'X-Requested-With':'XMLHttpRequest'}
+        });
+        const data = await resp.json();
+        
+        if (data.status === 'ok'){
+            showToast('Profil muvaffaqiyatli saqlandi');
+            // Navigate after a short delay to allow toast to be seen
+            setTimeout(()=>{ window.location.href = '/client_panel/dashboard/'; }, 1000);
+        } else { 
+            showToast(data.message || 'Saqlashda xato yuz berdi.', 'error');
+        }
+    } catch(e){ 
+        showToast('Aloqa xatoligi: ' + e.message, 'error'); 
+    } finally {
+        // Re-enable button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalSubmitContent;
+    }
 });
 
 // Toggle new-region input
 document.getElementById('region_missing').addEventListener('change', function(ev){
-  const wrap = document.getElementById('new_region_wrap');
-  const name = document.getElementById('region_name');
-  if (this.checked){
-    wrap.style.display = 'block';
-    name.setAttribute('disabled', 'disabled');
-  } else {
-    wrap.style.display = 'none';
-    name.removeAttribute('disabled');
-  }
+    const wrap = document.getElementById('new_region_wrap');
+    const name = document.getElementById('region_name');
+    if (this.checked){
+        wrap.style.display = 'block';
+        name.setAttribute('disabled', 'disabled');
+        name.classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+        wrap.style.display = 'none';
+        name.removeAttribute('disabled');
+        name.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
 });
 </script>
 {% endblock %}

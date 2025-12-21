@@ -59,6 +59,8 @@ class Order(models.Model):
     bottle_count = models.IntegerField()
     debt_change = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     client_note = models.TextField(null=True, blank=True)
+    payment_type = models.CharField(max_length=20, null=True, blank=True)
+    payment_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
 class BottleHistory(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE)

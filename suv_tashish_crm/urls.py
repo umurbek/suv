@@ -7,6 +7,7 @@ urlpatterns = [
     # Show login page by default; user must login to reach their dashboard
     path('', lambda request: redirect('/login/')),
     path('login/', views.login_view, name='login'),
+    path('set_language/', views.set_language, name='set_language'),
     path('logout/', views.logout_view, name='logout'),
     # login/logout removed per request
     path('admin/', admin.site.urls),

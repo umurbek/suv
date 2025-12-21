@@ -20,6 +20,7 @@ urlpatterns = [
     path('api/new_orders/', views.api_new_orders, name='courier_api_new_orders'),
     path('api/accept_order/', views.api_accept_order, name='courier_api_accept_order'),
     path('api/confirm_delivery/', views.api_confirm_delivery, name='courier_api_confirm_delivery'),
+    path('api/create_order_by_courier/', views.api_create_order_by_courier, name='courier_api_create_order_by_courier'),
     # Dedicated pages for courier
     path('new_orders/', views.new_orders_page, name='courier_new_orders_page'),
     path('history/', views.history_page, name='courier_history_page'),

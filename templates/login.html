@@ -69,15 +69,9 @@
             <label for="client-phone" class="block text-gray-700">Phone Number</label>
             <input type="text" id="client-phone" name="phone" required inputmode="tel" maxlength="13" pattern="^\+998[0-9]{9}$" title="Telefon +998XXXXXXXXX formatida bo‘lishi kerak (masalan +998884553663)" value="{% if phone %}{{ phone }}{% else %}+998{% endif %}" class="w-full border-gray-300 rounded p-2">
         </div>
-        <div class="mb-4">
-            <label for="client-region" class="block text-gray-700">Hudud</label>
-            <select id="client-region" name="client_region" class="w-full border-gray-300 rounded p-2" required>
-                <option value="">— Tanlang —</option>
-                {% for loc in locations %}
-                <option value="{{ loc }}">{{ loc }}</option>
-                {% endfor %}
-            </select>
-        </div>
+        <!-- Client location will be obtained from the device; no region select required -->
+        <input type="hidden" id="location-lat" name="location_lat" value="">
+        <input type="hidden" id="location-lon" name="location_lon" value="">
     </div>
 
     <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
@@ -139,7 +133,7 @@ form.addEventListener('submit', async function (ev) {
     if (role === 'courier'){
         const name = document.getElementById('courier-name').value.trim();
         const phone = document.getElementById('courier-phone').value.trim();
-        const nameRe = null;
+        let nameRe = null;
         try { nameRe = new RegExp('^[\\p{L}\\s\'\-]+$','u'); } catch(e) { }
         const fallbackNameRe = /^[A-Za-zА-Яа-яЁёЎўҚқҲҳҒғ\s'\-]+$/;
         if (!name || !( (nameRe && nameRe.test(name)) || fallbackNameRe.test(name) )){
@@ -154,7 +148,7 @@ form.addEventListener('submit', async function (ev) {
     if (role === 'client'){
         const name = document.getElementById('client-name').value.trim();
         const phone = document.getElementById('client-phone').value.trim();
-        const nameRe = null;
+        let nameRe = null;
         try { nameRe = new RegExp('^[\\p{L}\\s\'\-]+$','u'); } catch(e) { }
         const fallbackNameRe = /^[A-Za-zА-Яа-яЁёЎўҚқҲҳҒғ\s'\-]+$/;
         if (!name || !( (nameRe && nameRe.test(name)) || fallbackNameRe.test(name) )){
@@ -171,7 +165,7 @@ form.addEventListener('submit', async function (ev) {
         if (adminNameEl){
             const name = adminNameEl.value.trim();
             if (name){
-                const nameRe = null;
+                let nameRe = null;
                 try { nameRe = new RegExp('^[\\p{L}\\s\'\-]+$','u'); } catch(e) { }
                 const fallbackNameRe = /^[A-Za-zА-Яа-яЁёЎўҚқҲҳҒғ\s'\-]+$/;
                 if (!( (nameRe && nameRe.test(name)) || fallbackNameRe.test(name) )){
@@ -196,6 +190,35 @@ form.addEventListener('submit', async function (ev) {
     }
 
     const fd = new FormData(form);
+    // If client role, try to attach geolocation before sending
+    if (role === 'client' && navigator.geolocation) {
+        // Attempt to get current position with a short timeout; do not block forever
+        const getPosition = () => new Promise((resolve) => {
+            let resolved = false;
+            const success = (pos) => { if (!resolved) { resolved = true; resolve({lat: pos.coords.latitude, lon: pos.coords.longitude}); } };
+            const fail = () => { if (!resolved) { resolved = true; resolve(null); } };
+            try {
+                navigator.geolocation.getCurrentPosition(success, fail, {enableHighAccuracy: true, timeout: 5000, maximumAge: 0});
+                // safety: ensure we resolve after 6s
+                setTimeout(() => { if (!resolved) { resolved = true; resolve(null); } }, 6000);
+            } catch (e) {
+                resolve(null);
+            }
+        });
+        try {
+            const pos = await getPosition();
+            if (pos && pos.lat && pos.lon) {
+                fd.set('location_lat', String(pos.lat));
+                fd.set('location_lon', String(pos.lon));
+                const latEl = document.getElementById('location-lat');
+                const lonEl = document.getElementById('location-lon');
+                if (latEl) latEl.value = pos.lat;
+                if (lonEl) lonEl.value = pos.lon;
+            }
+        } catch (e) {
+            // ignore geolocation errors and submit without location
+        }
+    }
     try {
         const resp = await fetch(form.action || window.location.pathname, {
             method: 'POST',

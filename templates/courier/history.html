@@ -7,7 +7,7 @@
         <div class="text-sm text-gray-500">Siz: {% if courier %}{{ courier.full_name }}{% else %}—{% endif %}</div>
     </div>
 
-    <div class="bg-white p-6 rounded shadow">
+    <div class="bg-white p-6 rounded shadow border border-gray-100">
         <table class="w-full text-sm">
             <thead>
                 <tr class="border-b">
@@ -15,15 +15,17 @@
                     <th class="text-left py-2">Buyurtma ID</th>
                     <th class="text-left py-2">Mijoz</th>
                     <th class="text-left py-2">Summa</th>
+                    <th class="text-left py-2">To'lov turi</th>
                 </tr>
             </thead>
             <tbody>
                 {% for r in rows %}
-                <tr>
+                <tr class="odd:bg-white even:bg-gray-50">
                     <td class="py-2">{{ r.date }}</td>
                     <td class="py-2">{{ r.order_id }}</td>
                     <td class="py-2">{{ r.client }}</td>
                     <td class="py-2">{{ r.amount }}</td>
+                    <td class="py-2">{{ r.payment_type }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

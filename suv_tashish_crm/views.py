@@ -202,29 +202,57 @@ def login_view(request):
             name = (request.POST.get('client_name') or '').strip()
             # accept either client_phone or phone POST key
             phone = (request.POST.get('client_phone') or request.POST.get('phone') or '').strip()
-            region_name = (request.POST.get('client_region') or '').strip()
-            if not name or not phone or not region_name:
-                error = 'Iltimos ism, telefon va hududni tanlang.'
+            # accept location posted from device (fields added by JS)
+            lat = (request.POST.get('location_lat') or request.POST.get('lat') or '').strip()
+            lon = (request.POST.get('location_lon') or request.POST.get('lon') or '').strip()
+            # No manual region selection required: we will try to infer region from lat/lon
+            if not name or not phone:
+                error = 'Iltimos ism va telefon kiriting.'
             else:
                 if not is_valid_name(name):
                     error = "Ism noto‘g‘ri — faqat harflar va bo'sh joy ruxsat etiladi."
                 elif not is_valid_phone(phone):
                     error = "Telefon formati xato — +998XXXXXXXXX ko'rinishida bo'lsin."
             if not error:
-                # ensure Region exists
-                region_obj, _ = Region.objects.get_or_create(name=region_name)
-                client, created = Client.objects.get_or_create(phone=phone, defaults={'full_name': name, 'region': region_obj, 'location_lat': 0.0, 'location_lon': 0.0})
+                # create or get client by phone; we'll update region/location after
+                client, created = Client.objects.get_or_create(phone=phone, defaults={'full_name': name, 'location_lat': 0.0, 'location_lon': 0.0})
                 if not created:
-                    # update name/region if missing
+                    # update name if missing
                     updated = False
                     if not client.full_name or client.full_name.strip() == '':
                         client.full_name = name
                         updated = True
-                    if not client.region:
-                        client.region = region_obj
-                        updated = True
                     if updated:
                         client.save()
+                # if we received lat/lon, attempt to save and reverse-geocode into Region
+                region_obj = None
+                try:
+                    if lat and lon:
+                        try:
+                            client.location_lat = float(lat)
+                            client.location_lon = float(lon)
+                        except Exception:
+                            # ignore parsing errors
+                            pass
+                        # attempt to reverse geocode to a human-readable region/address
+                        try:
+                            from geopy.geocoders import Nominatim
+                            geolocator = Nominatim(user_agent='crm_app')
+                            loc = geolocator.reverse(f"{lat},{lon}", language='en')
+                            if loc and loc.address:
+                                addr = loc.address
+                                region_obj, _ = Region.objects.get_or_create(name=addr)
+                        except Exception:
+                            region_obj = None
+                except Exception:
+                    region_obj = None
+                # if reverse-geocode didn't yield a region but a Region exists for client, keep it; otherwise leave null
+                try:
+                    if region_obj:
+                        client.region = region_obj
+                    client.save()
+                except Exception:
+                    pass
                 # If newly created, generate a unique customer_id, split names, append to CSV and notify admin
                 if created:
                     try:
@@ -240,7 +268,7 @@ def login_view(request):
                             client.first_name = name
                             client.last_name = ''
                         client.save()
-                        # append to Volidam.csv (name, bottle, location, phone) - bottle blank, location from region
+                        # append to Volidam.csv (name, bottle, location, phone) - bottle blank, location from region (if available)
                         try:
                             csv_path = os.path.join(BASE_DIR, 'Volidam.csv')
                             file_exists = os.path.exists(csv_path)
@@ -318,4 +346,17 @@ def logout_view(request):
             except Exception:
                 pass
     return redirect('/login/')
+
+
+def set_language(request):
+    """Simple view to set session language. Accepts POST or GET `lang` value and redirects back."""
+    lang = request.POST.get('lang') or request.GET.get('lang')
+    if lang in ('uz_lat', 'uz_cyrl', 'ru'):
+        try:
+            request.session['lang'] = lang
+        except Exception:
+            pass
+    # Redirect back to Referer or root
+    next_url = request.META.get('HTTP_REFERER') or '/'
+    return redirect(next_url)
 
