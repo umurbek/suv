@@ -1,35 +1,191 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="p-6">
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl font-bold">Qilingan ishlar</h2>
-        <div class="text-sm text-gray-500">Siz: {% if courier %}{{ courier.full_name }}{% else %}—{% endif %}</div>
+<div class="min-h-screen bg-[#0f172a] text-slate-200 p-4 md:p-8">
+    
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
+        <div class="relative">
+            <h2 class="text-3xl md:text-4xl font-black text-white tracking-tight italic">
+                ISH <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500">TARIXI</span>
+            </h2>
+            <div class="h-1 w-20 bg-emerald-500 mt-2 rounded-full shadow-[0_0_10px_#10b981]"></div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <div class="text-right hidden md:block">
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Kuryer</p>
+                <p class="text-sm font-medium text-white">{% if courier %}{{ courier.full_name }}{% else %}—{% endif %}</p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center font-bold text-white shadow-lg">
+                {{ courier.full_name|slice:":1"|default:"K" }}
+            </div>
+        </div>
     </div>
 
-    <div class="bg-white p-6 rounded shadow border border-gray-100">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="border-b">
-                    <th class="text-left py-2">Sana</th>
-                    <th class="text-left py-2">Buyurtma ID</th>
-                    <th class="text-left py-2">Mijoz</th>
-                    <th class="text-left py-2">Summa</th>
-                    <th class="text-left py-2">To'lov turi</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for r in rows %}
-                <tr class="odd:bg-white even:bg-gray-50">
-                    <td class="py-2">{{ r.date }}</td>
-                    <td class="py-2">{{ r.order_id }}</td>
-                    <td class="py-2">{{ r.client }}</td>
-                    <td class="py-2">{{ r.amount }}</td>
-                    <td class="py-2">{{ r.payment_type }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="md:col-span-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl flex items-center px-4">
+            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input id="history-search" type="text" placeholder="Buyurtma yoki mijozni izlash..." class="bg-transparent border-none focus:ring-0 text-sm p-4 w-full text-white placeholder-slate-500">
+        </div>
+        <div class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-1 flex">
+            <button id="filter-all" class="flex-1 bg-white/10 text-white rounded-xl text-xs font-bold uppercase py-2 tracking-tighter transition">Hammasi</button>
+            <button id="filter-cash" class="flex-1 text-slate-500 hover:text-white rounded-xl text-xs font-bold uppercase py-2 tracking-tighter transition">Naqd</button>
+        </div>
+        <button id="export-csv" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded-2xl text-xs font-bold uppercase py-2 transition flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Excelga yuklash
+        </button>
+    </div>
+
+    <div class="bg-white/5 backdrop-blur-md border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-white/5 text-slate-400 text-xs uppercase tracking-[0.2em]">
+                        <th class="p-6 font-black">Sana</th>
+                        <th class="p-6 font-black">Buyurtma</th>
+                        <th class="p-6 font-black">Mijoz</th>
+                        <th class="p-6 font-black">To'lov turi</th>
+                        <th class="p-6 font-black text-right">Summa</th>
+                    </tr>
+                </thead>
+                <tbody id="history-tbody" class="divide-y divide-white/5">
+                    <!-- Rows will be loaded dynamically via JS. Server-side fallback (if JS disabled) still works below. -->
+                    {% for r in rows %}
+                    <tr class="group hover:bg-white/[0.03] transition-colors">
+                        <td class="p-6"><span class="text-sm text-slate-300 font-medium">{{ r.date }}</span></td>
+                        <td class="p-6">
+                            <div class="flex items-center gap-3">
+                                <span class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-mono text-xs border border-emerald-500/20 group-hover:shadow-[0_0_10px_rgba(16,185,129,0.2)] transition">#</span>
+                                <span class="text-white font-bold tracking-tight">{{ r.order_id }}</span>
+                            </div>
+                        </td>
+                        <td class="p-6"><span class="text-sm text-slate-400 group-hover:text-slate-200 transition">{{ r.client }}</span></td>
+                        <td class="p-6 text-sm"><span class="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition">{{ r.payment_type }}</span></td>
+                        <td class="p-6 text-right"><span class="text-lg font-black text-white group-hover:text-emerald-400 transition">{{ r.amount }} <span class="text-[10px] text-slate-500 font-normal">UZS</span></span></td>
+                    </tr>
+                    {% empty %}
+                    <tr class="js-no-data-row">
+                        <td colspan="5" class="p-20 text-center">
+                            <div class="flex flex-col items-center gap-4">
+                                <svg class="w-12 h-12 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                                <p class="text-slate-500 font-medium tracking-tight italic">Hozircha hech qanday ishlar qayd etilmagan.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const apiUrl = '/courier_panel/api/history/';
+    const tbody = document.getElementById('history-tbody');
+    const searchInput = document.getElementById('history-search');
+    const filterAll = document.getElementById('filter-all');
+    const filterCash = document.getElementById('filter-cash');
+    const exportBtn = document.getElementById('export-csv');
+
+    let cachedRows = [];
+    function fmtAmount(v){ try{ if(v === null || v === undefined) return '-'; return v.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "\u00A0"); } catch(e){ return v; } }
+
+    function renderRows(rows){
+        if(!tbody) return;
+        // remove server-side no-data row
+        const noData = tbody.querySelector('.js-no-data-row'); if(noData) noData.remove();
+        tbody.innerHTML = '';
+        if(!rows || rows.length === 0){
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="5" class="p-20 text-center"><div class="flex flex-col items-center gap-4"><svg class="w-12 h-12 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg><p class="text-slate-500 font-medium tracking-tight italic">Hozircha hech qanday ishlar qayd etilmagan.</p></div></td>`;
+            tbody.appendChild(tr);
+            return;
+        }
+
+        rows.forEach(r=>{
+            const tr = document.createElement('tr');
+            tr.className = 'group hover:bg-white/[0.03] transition-colors';
+            const date = r.date || '';
+            const orderId = r.order_id || (r.order_id ? r.order_id : '#'+(r.order_id || ''));
+            const client = r.client || '-';
+            const ptype = r.payment_type || '';
+            const amount = r.amount || '';
+
+            tr.innerHTML = `
+                <td class="p-6"><span class="text-sm text-slate-300 font-medium">${date}</span></td>
+                <td class="p-6"><div class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-mono text-xs border border-emerald-500/20 group-hover:shadow-[0_0_10px_rgba(16,185,129,0.2)] transition">#</span><span class="text-white font-bold tracking-tight">${orderId}</span></div></td>
+                <td class="p-6"><span class="text-sm text-slate-400 group-hover:text-slate-200 transition">${client}</span></td>
+                <td class="p-6 text-sm"><span class="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition">${ptype}</span></td>
+                <td class="p-6 text-right"><span class="text-lg font-black text-white group-hover:text-emerald-400 transition">${fmtAmount(amount)} <span class="text-[10px] text-slate-500 font-normal">UZS</span></span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function fetchHistory(){
+        try{
+            const r = await fetch(apiUrl, { credentials: 'same-origin' });
+            if(!r.ok) throw new Error('fetch failed');
+            const j = await r.json();
+                if(j && j.data){
+                // store as cachedRows for filter/export
+                cachedRows = j.data.map(it => {
+                    const raw = (it.payment_type || '').toString().toLowerCase();
+                    let ptype_label = '';
+                    if(raw === 'cash') ptype_label = "Pul berdi";
+                    else if(raw === 'debt') ptype_label = "Qarz bo'ldi";
+                    else if(raw === 'click') ptype_label = 'Click/online';
+                    else ptype_label = (it.payment_type || '');
+                    return { date: it.date || '', order_id: it.order_id || ('#'+(it.id||'')), client: it.client || (it.client_name || ''), payment_type: ptype_label, amount: it.amount || it.debt_change || '' };
+                });
+                renderRows(cachedRows);
+            } else {
+                renderRows([]);
+            }
+        }catch(e){
+            console.warn('history fetch failed', e);
+            // keep server-rendered rows if present
+        }
+    }
+
+    function applySearch(q){
+        q = (q||'').trim().toLowerCase();
+        if(!q) return renderRows(cachedRows);
+        const filtered = cachedRows.filter(r=>{
+            return (r.order_id && String(r.order_id).toLowerCase().includes(q)) || (r.client && String(r.client).toLowerCase().includes(q)) || (r.payment_type && String(r.payment_type).toLowerCase().includes(q));
+        });
+        renderRows(filtered);
+    }
+
+    // CSV export utility
+    function downloadCSV(rows){
+        if(!rows || rows.length===0) { alert('Ma\'lumot topilmadi'); return; }
+        const header = ['date','order_id','client','payment_type','amount'];
+        const lines = [header.join(',')];
+        rows.forEach(r=>{
+            const values = [r.date||'', (r.order_id||'').toString().replace(/,/g,''), (r.client||'').toString().replace(/,/g,''), (r.payment_type||'').toString().replace(/,/g,''), (r.amount||'').toString().replace(/,/g,'')];
+            lines.push(values.map(v=>`"${v.replace(/"/g,'""')}"`).join(','));
+        });
+        const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `courier_history_${new Date().toISOString().slice(0,10)}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    // Event wiring
+    if(searchInput){
+        let t = null;
+        searchInput.addEventListener('input', function(e){ clearTimeout(t); t = setTimeout(()=> applySearch(e.target.value), 250); });
+    }
+    if(filterAll){ filterAll.addEventListener('click', ()=> renderRows(cachedRows)); }
+    if(filterCash){ filterCash.addEventListener('click', ()=> renderRows(cachedRows.filter(r=> (r.payment_type||'').toLowerCase().includes('cash') || (r.payment_type||'').toLowerCase().includes('naqd') ))); }
+    if(exportBtn){ exportBtn.addEventListener('click', ()=> downloadCSV(cachedRows)); }
+
+    // initial fetch
+    fetchHistory();
+});
+</script>
 {% endblock %}

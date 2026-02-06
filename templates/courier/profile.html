@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-[#0f172a] text-slate-200 p-6">
+    <div class="max-w-2xl mx-auto">
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-8">
+            <h2 class="text-2xl font-bold text-white mb-4">Profilni tahrirlash</h2>
+            {% if error %}
+                <div class="mb-4 text-sm text-rose-400">{{ error }}</div>
+            {% endif %}
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">To'liq ism</label>
+                    <input name="full_name" value="{% if courier %}{{ courier.full_name }}{% endif %}" class="w-full bg-slate-900/50 border border-white/10 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">Telefon</label>
+                    <input name="phone" value="{% if courier %}{{ courier.phone }}{% endif %}" class="w-full bg-slate-900/50 border border-white/10 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex items-center gap-3">
+                    <input id="is_active" type="checkbox" name="is_active" class="h-4 w-4" {% if courier and courier.is_active %}checked{% endif %}>
+                    <label for="is_active" class="text-sm text-slate-300">Faol kuryer</label>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold">Saqlash</button>
+                    <a href="/courier_panel/dashboard/" class="px-6 py-3 rounded-xl border border-white/10 text-slate-300">Ortga</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="max-w-2xl mx-auto mt-6">
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-4">
+            <h3 class="text-lg font-bold text-white mb-3">Joriy joylashuv (real-time)</h3>
+            <div id="courier-pos-info" class="text-sm text-slate-400 mb-2">Yuklanmoqda...</div>
+            <div id="courier-map" class="w-full h-64 rounded-lg overflow-hidden border border-white/5"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const mapEl = document.getElementById('courier-map');
+    const infoEl = document.getElementById('courier-pos-info');
+    // courier id from template context
+    const COURIER_ID = {% if courier %}{{ courier.id }}{% else %}null{% endif %};
+    if(!COURIER_ID){
+        if(infoEl) infoEl.innerText = 'Kuryer aniqlanmadi.';
+        return;
+    }
+
+    const posEndpoint = `/courier_panel/api/position/${COURIER_ID}/`;
+    let map = null;
+    let marker = null;
+
+    function initMap(){
+        try{
+            map = L.map(mapEl, { attributionControl: false }).setView([41.311081, 69.240562], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        }catch(e){ console.warn('Leaflet init failed', e); }
+    }
+
+    function updateMarker(pos){
+        if(!pos){
+            if(infoEl) infoEl.innerText = 'Pozitsiya topilmadi';
+            return;
+        }
+        const lat = parseFloat(pos.lat);
+        const lon = parseFloat(pos.lon);
+        if(Number.isNaN(lat) || Number.isNaN(lon)){
+            if(infoEl) infoEl.innerText = 'Noaniq koordinatalar';
+            return;
+        }
+        if(!marker){
+            marker = L.marker([lat, lon]).addTo(map);
+            try{ map.setView([lat, lon], 14); }catch(e){}
+        } else {
+            marker.setLatLng([lat, lon]);
+        }
+        if(infoEl){
+            const ts = pos.ts ? new Date(pos.ts).toLocaleString() : '—';
+            infoEl.innerHTML = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)} — Updated: ${ts}`;
+        }
+    }
+
+    async function pollPos(){
+        try{
+            const r = await fetch(posEndpoint, { credentials: 'same-origin' });
+            if(!r.ok) throw new Error('fetch failed');
+            const j = await r.json();
+            if(j && j.data){
+                updateMarker(j.data);
+            } else {
+                updateMarker(null);
+            }
+        }catch(e){
+            console.warn('pos fetch failed', e);
+            if(infoEl) infoEl.innerText = 'Pozitsiyani yuklashda xato';
+        }
+    }
+
+    initMap();
+    pollPos();
+    // poll every 6 seconds
+    setInterval(pollPos, 6000);
+});
+</script>
+{% endblock %}

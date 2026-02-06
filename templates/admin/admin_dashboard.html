@@ -13,11 +13,11 @@
             </div>
             <div class="flex items-center gap-4 bg-[#0f172a] p-2 rounded-2xl border border-white/5">
                 <div class="text-right hidden sm:block">
-                    <p class="text-sm font-bold text-white">Admin G'anisher</p>
+                    <p class="text-sm font-bold text-white">{% if request.user.is_authenticated %}{{ request.user.username }}{% else %}Administrator{% endif %}</p>
                     <p class="text-xs text-emerald-400">Online</p>
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                    <span class="text-xl">A</span>
+                    <span class="text-xl">{% if request.user.is_authenticated %}{{ request.user.username|slice:":1"|upper }}{% else %}A{% endif %}</span>
                 </div>
             </div>
         </header>

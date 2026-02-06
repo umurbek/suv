@@ -1,469 +1,754 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="px-6 py-6">
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl md:text-3xl font-bold">{{ T.dashboard|default:'Dashboard' }}</h2>
-        <div class="text-right flex items-center gap-3">
-            <div class="font-medium">{% if courier %}{{ courier.full_name }}{% else %}—{% endif %}</div>
-            <div class="text-sm text-gray-500">{% if courier %}{{ courier.phone }}{% else %}—{% endif %}</div>
-            <button id="openCreateOrderBtn" class="ml-4 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md shadow">Yangi buyurtma</button>
+<div class="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#0f172a] text-slate-200 p-4 md:p-6">
+    <div class="mx-auto max-w-7xl">
+        
+        <!-- Header Section -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-2">
+                <h1 class="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600">
+                    Kuryer Dashboard
+                </h1>
+                <div class="hidden md:flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 rounded-full">
+                    <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                    <span class="text-sm font-bold text-emerald-400">Onlayn</span>
+                </div>
+            </div>
+            <p class="text-slate-400 text-sm md:text-base">Bugungi ish jarayonini kuzatib boring</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="group bg-gradient-to-br from-blue-600/20 to-blue-800/10 backdrop-blur-xl border border-blue-500/30 p-6 rounded-3xl hover:scale-105 transition-all duration-300 cursor-pointer">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="p-3 bg-blue-500/20 rounded-2xl">
+                        <i class="fa-solid fa-box-open text-2xl text-blue-400"></i>
+                    </div>
+                    <span class="text-xs text-blue-300 font-semibold">Bugun</span>
+                </div>
+                <div id="todaysCountEl" class="text-3xl font-black text-white mb-1">0</div>
+                <p class="text-xs text-slate-400">Buyurtmalar</p>
+            </div>
+
+            <div class="group bg-gradient-to-br from-emerald-600/20 to-emerald-800/10 backdrop-blur-xl border border-emerald-500/30 p-6 rounded-3xl hover:scale-105 transition-all duration-300 cursor-pointer">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="p-3 bg-emerald-500/20 rounded-2xl">
+                        <i class="fa-solid fa-check-double text-2xl text-emerald-400"></i>
+                    </div>
+                    <span class="text-xs text-emerald-300 font-semibold">Tugallangan</span>
+                </div>
+                <div id="deliveredCountEl" class="text-3xl font-black text-white mb-1">0</div>
+                <p class="text-xs text-slate-400">Yetkazildi</p>
+            </div>
+
+            <div class="group bg-gradient-to-br from-amber-600/20 to-amber-800/10 backdrop-blur-xl border border-amber-500/30 p-6 rounded-3xl hover:scale-105 transition-all duration-300 cursor-pointer">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="p-3 bg-amber-500/20 rounded-2xl">
+                        <i class="fa-solid fa-truck-fast text-2xl text-amber-400"></i>
+                    </div>
+                    <span class="text-xs text-amber-300 font-semibold">Jarayonda</span>
+                </div>
+                <div class="text-3xl font-black text-white mb-1">0</div>
+                <p class="text-xs text-slate-400">Ketmoqda</p>
+            </div>
+
+            <div class="group bg-gradient-to-br from-purple-600/20 to-purple-800/10 backdrop-blur-xl border border-purple-500/30 p-6 rounded-3xl hover:scale-105 transition-all duration-300 cursor-pointer">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="p-3 bg-purple-500/20 rounded-2xl">
+                        <i class="fa-solid fa-clock text-2xl text-purple-400"></i>
+                    </div>
+                    <span class="text-xs text-purple-300 font-semibold">Kutilmoqda</span>
+                </div>
+                <div class="text-3xl font-black text-white mb-1">0</div>
+                <p class="text-xs text-slate-400">Yangilar</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column - Orders List -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Today's Orders -->
+                <div class="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 shadow-2xl">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-black text-white flex items-center gap-3">
+                            <div class="w-1 h-8 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-full"></div>
+                            Bugungi Buyurtmalar
+                        </h3>
+                        <div class="flex items-center gap-3">
+                            <button id="openCreateOrderBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-bold transition-all">
+                                <i class="fa-solid fa-plus mr-2"></i>Yangi buyurtma
+                            </button>
+                            <button class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-bold transition-all">
+                                <i class="fa-solid fa-refresh mr-2"></i>Yangilash
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="todayOrdersList" class="space-y-3">
+                        <!-- Orders will be loaded here -->
+                        <div class="flex items-center justify-center py-16">
+                            <div class="text-center">
+                                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4"></div>
+                                <p class="text-slate-400">Yuklanmoqda...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weekly Chart -->
+                <div class="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 shadow-2xl">
+                    <h3 class="text-xl font-black text-white mb-6 flex items-center gap-3">
+                        <div class="w-1 h-8 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></div>
+                        Haftalik Statistika
+                    </h3>
+                    <div class="h-64">
+                        <canvas id="courierWeeklyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Map & Info -->
+            <div class="space-y-6">
+                <!-- Map -->
+                <div class="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 shadow-2xl">
+                    <h4 class="text-white font-bold mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-location-dot text-red-500"></i>
+                        Joylashuvingiz
+                    </h4>
+                    <div id="courierMap" class="rounded-2xl overflow-hidden border border-white/10" style="height:280px;"></div>
+                </div>
+
+                <!-- Top Clients -->
+                <div class="bg-gradient-to-br from-indigo-600/10 to-purple-600/10 backdrop-blur-xl border border-indigo-500/30 rounded-3xl p-6 shadow-2xl">
+                    <h4 class="text-white font-bold mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-star text-yellow-400"></i>
+                        Top Mijozlar
+                    </h4>
+                    <ul class="space-y-2">
+                        {% for c in top_clients %}
+                        <li class="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs shadow-lg">
+                                    {{ forloop.counter }}
+                                </div>
+                                <span class="text-sm font-medium text-white group-hover:text-indigo-300 transition-colors">{{ c.client__full_name }}</span>
+                            </div>
+                            <span class="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded-lg font-bold">{{ c.orders_count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="text-slate-500 text-sm text-center py-4">Ma'lumot yo'q</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Debtors -->
+                <div class="bg-gradient-to-br from-red-600/10 to-orange-600/10 backdrop-blur-xl border border-red-500/30 rounded-3xl p-6 shadow-2xl">
+                    <h4 class="text-white font-bold mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-exclamation-triangle text-red-400"></i>
+                        Qarzdorlar
+                    </h4>
+                    <div class="space-y-2">
+                        {% for d in debtors %}
+                        <div class="p-3 bg-red-500/5 border border-red-500/20 rounded-xl">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-bold text-white">{{ d.name }}</span>
+                                <span class="text-xs font-black text-red-400">{{ d.debt }} UZS</span>
+                            </div>
+                            <p class="text-xs text-slate-400">{{ d.phone }}</p>
+                        </div>
+                        {% empty %}
+                        <div class="text-slate-500 text-sm text-center py-4">Qarzdorlar yo'q ✓</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 space-y-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    <div class="bg-white shadow-md border border-gray-200 p-4 rounded-lg text-gray-800">
-                        <p class="text-sm text-gray-500">{{ T.today_orders|default:'Bugungi buyurtmalar' }}</p>
-                        <p id="todaysCountEl" class="text-2xl font-bold">{{ todays_count }} ta</p>
-                    </div>
-                <div class="bg-white shadow-md border border-gray-200 p-4 rounded-lg text-gray-800">
-                    <p class="text-sm text-gray-500">{{ T.total_delivered|default:'Yetkazilgan jami' }}</p>
-                    <p id="deliveredCountEl" class="text-2xl font-bold text-indigo-600">{{ delivered_count }} ta</p>
-                </div>
-                <div class="bg-white shadow-md border border-gray-200 p-4 rounded-lg text-gray-800">
-                    <p class="text-sm text-gray-500">{{ T.status_label|default:'Status' }}</p>
-                    <p class="text-2xl font-bold text-green-600">{% if courier.is_active %}{{ T.active|default:'Faol' }}{% else %}{{ T.inactive|default:'Faol emas' }}{% endif %}</p>
-                </div>
-            </div>
-
-            <div class="bg-white shadow-md border border-gray-200 p-6 rounded-xl text-gray-800">
-                <h3 class="text-lg font-semibold mb-4 text-slate-100">{{ T.weekly_deliveries|default:'Weekly Deliveries' }}</h3>
-                <div class="h-64">
-                    <canvas id="courierWeeklyChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Move today's orders / status section under the chart for earlier visibility -->
-            <div class="bg-white shadow-md border border-gray-200 p-6 rounded-xl mt-4 text-gray-800">
-                 <h3 class="text-lg font-semibold mb-4">{{ T.today_orders_status|default:"Bugungi buyurtmalar (status bo'yicha)" }}</h3>
-                <div id="todayOrdersList" class="text-sm text-gray-600">
-                    Loading...
-                </div>
-            </div>
-
-              <div class="bg-white shadow-md border border-gray-200 p-6 rounded-xl">
-                  <h3 class="text-lg font-semibold mb-4">{{ T.my_orders|default:'Mening buyurtmalarim' }}</h3>
-                <div class="overflow-auto">
-                <table class="w-full">
-                    <thead>
-                        <tr class="border-b">
-                            <th class="text-left py-2 text-slate-300">{{ T.id|default:'ID' }}</th>
-                            <th class="text-left py-2 text-slate-300">{{ T.client|default:'Mijoz' }}</th>
-                            <th class="text-left py-2 text-slate-300">{{ T.status|default:'Status' }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for o in recent_orders %}
-                        <tr>
-                            <td class="py-2 text-slate-200">#{{ o.id }}</td>
-                            {% if o.client %}
-                            <td class="py-2 text-slate-200">{{ o.client.full_name }}</td>
-                            {% else %}
-                            <td class="py-2 text-slate-200">—</td>
-                            {% endif %}
-                            <td class="py-2 {% if o.status == 'done' %}text-green-300{% elif o.status == 'delivering' or o.status == 'assigned' %}text-blue-300{% else %}text-slate-300{% endif %}">{{ o.get_status_display|default:o.status }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="3" class="py-2 text-slate-400">{{ T.no_orders|default:"Buyurtma yo'q" }}</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                </div>
-            </div>
-
-            <!-- New orders and history moved to their own pages -->
-        </div>
-
-        <aside>
-            <div class="bg-white shadow-md border border-gray-200 p-6 rounded-xl text-gray-800">
-                <h4 class="font-semibold mb-4">Top mijozlar</h4>
-                <ul class="space-y-3">
-                    {% for c in top_clients %}
-                    <li class="flex items-center justify-between">
-                        <div>
-                            <div class="font-medium text-gray-800">{{ c.client__full_name }}</div>
-                            <div class="text-xs text-gray-500">—</div>
+</div>
+                        <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Qarzdorlar
+                    </h4>
+                    <div class="space-y-3">
+                        {% for d in debtors %}
+                        <div class="relative pl-4 border-l-2 border-rose-500/30">
+                            <div class="flex justify-between items-start">
+                                <span class="text-sm font-bold text-slate-200">{{ d.name }}</span>
+                                <span class="text-xs font-black text-rose-400">{{ d.debt }} UZS</span>
+                            </div>
+                            <p class="text-[10px] text-slate-500">{{ d.phone }}</p>
                         </div>
-                        <div class="text-sm text-gray-600">{{ c.orders_count }} ta</div>
+                        {% empty %}
+                        <div class="text-slate-500 text-sm italic">Qarzdorlar yo'q</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="bg-white/5 backdrop-blur-md border border-white/10 p-4 md:p-6 rounded-[2rem]">
+                    <h4 class="text-white font-bold mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Nofaol mijozlar (10+)
+                    </h4>
+                    <div class="space-y-3">
+                        {% for c in inactive_clients %}
+                        <div class="flex justify-between items-center p-2 rounded-lg bg-white/[0.02]">
+                            <div class="text-xs">
+                                <div class="font-bold text-slate-300">{{ c.name }}</div>
+                                <div class="text-[10px] text-slate-500 mt-0.5">{{ c.last_order }}</div>
+                            </div>
+                            <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded-full">{{ c.days_since }} kun</span>
+                        </div>
+                        {% empty %}
+                        <div class="text-slate-500 text-sm italic text-center py-4">Hamma faol 🔥</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+            <!-- Removed duplicate real-time map block (another #courierMap) to avoid double initialization -->
+
+            <div class="bg-gradient-to-br from-indigo-900/20 to-slate-900/20 backdrop-blur-md border border-white/10 p-6 rounded-[2rem]">
+                <h4 class="text-white font-bold mb-6 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                    Top Mijozlar
+                </h4>
+                <ul class="space-y-4">
+                    {% for c in top_clients %}
+                    <li class="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-xs">
+                                {{ forloop.counter }}
+                            </div>
+                            <span class="text-sm font-medium text-slate-200">{{ c.client__full_name }}</span>
+                        </div>
+                        <span class="text-xs bg-white/5 px-2 py-1 rounded text-slate-400 font-mono">{{ c.orders_count }} ta</span>
                     </li>
                     {% empty %}
-                    <li class="text-gray-500">Top mijozlar topilmadi.</li>
+                    <li class="text-slate-500 text-sm italic py-2">Ma'lumot topilmadi</li>
                     {% endfor %}
                 </ul>
             </div>
-            <div class="bg-white shadow-md border border-gray-200 p-6 rounded-xl mt-6 text-gray-800">
-                <h4 class="font-semibold mb-4">Real-time Map</h4>
-                <div id="courierMap" style="height:300px;"></div>
-            </div>
-            <div class="bg-white shadow-md border border-gray-200 p-6 rounded-xl mt-6 text-gray-800">
-                <h4 class="font-semibold mb-4">Qarzdorlar</h4>
-                <div class="text-sm text-gray-600">
-                    {% if debtors and debtors|length > 0 %}
-                        <ul class="space-y-2">
-                            {% for d in debtors %}
-                            <li class="flex items-center justify-between">
-                                <div>
-                                    <div class="font-medium text-gray-800">{{ d.name }}</div>
-                                    <div class="text-xs text-gray-500">{{ d.phone }}</div>
-                                </div>
-                                <div class="text-sm text-amber-500">{{ d.debt }} UZS</div>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <div class="text-gray-500">Qarzdorlar topilmadi.</div>
-                    {% endif %}
+
+            <div class="bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-[2rem]">
+                <h4 class="text-white font-bold mb-6 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Qarzdorlar
+                </h4>
+                <div class="space-y-4">
+                    {% for d in debtors %}
+                    <div class="relative pl-4 border-l-2 border-rose-500/30">
+                        <div class="flex justify-between items-start">
+                            <span class="text-sm font-bold text-slate-200">{{ d.name }}</span>
+                            <span class="text-xs font-black text-rose-400">{{ d.debt }} UZS</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500">{{ d.phone }}</p>
+                    </div>
+                    {% empty %}
+                    <div class="text-slate-500 text-sm italic">Qarzdorlar yo'q</div>
+                    {% endfor %}
                 </div>
             </div>
-            <div class="bg-white shadow-md border border-gray-200 p-6 rounded-xl mt-6 text-gray-800">
-                <h4 class="font-semibold mb-4">Nofaol mijozlar (10+ kun)</h4>
-                <div class="text-sm text-gray-600">
-                    {% if inactive_clients and inactive_clients|length > 0 %}
-                        <ul class="space-y-2">
-                            {% for c in inactive_clients %}
-                            <li class="flex items-center justify-between">
-                                <div>
-                                    <div class="font-medium text-gray-800">{{ c.name }}</div>
-                                    <div class="text-xs text-gray-500">{{ c.phone }} • {{ c.last_order }}</div>
-                                </div>
-                                <div class="text-sm text-gray-500">{{ c.days_since }} kun</div>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <div class="text-gray-500">Nofaol mijozlar yo'q.</div>
-                    {% endif %}
+
+            <div class="bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-[2rem]">
+                <h4 class="text-white font-bold mb-6 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Nofaol mijozlar (10+)
+                </h4>
+                <div class="space-y-4">
+                    {% for c in inactive_clients %}
+                    <div class="flex justify-between items-center p-2 rounded-lg bg-white/[0.02]">
+                        <div class="text-xs">
+                            <div class="font-bold text-slate-300">{{ c.name }}</div>
+                            <div class="text-[10px] text-slate-500 mt-0.5">{{ c.last_order }}</div>
+                        </div>
+                        <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded-full">{{ c.days_since }} kun</span>
+                    </div>
+                    {% empty %}
+                    <div class="text-slate-500 text-sm italic text-center py-4">Hamma faol 🔥</div>
+                    {% endfor %}
                 </div>
             </div>
         </aside>
     </div>
 
-    <!-- Create Order Modal -->
-    <div id="create-order-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg w-full max-w-md p-6">
-            <h3 class="text-lg font-semibold mb-3">Yangi buyurtma qo'shish</h3>
-            <form id="create-order-form">
-                <label class="block text-sm mb-1">Mijoz telefon (+998...)</label>
-                <input id="co_phone" name="client_phone" class="w-full p-2 border rounded mb-2" placeholder="+998..." required />
-                <label class="block text-sm mb-1">Mijoz ismi (ixtiyoriy)</label>
-                <input id="co_name" name="client_name" class="w-full p-2 border rounded mb-2" placeholder="Ism" />
-                <label class="block text-sm mb-1">Bottles</label>
-                <input id="co_bottles" name="bottles" type="number" value="1" min="1" class="w-full p-2 border rounded mb-2" />
-                <label class="block text-sm mb-1">Izoh</label>
-                <textarea id="co_note" name="note" class="w-full p-2 border rounded mb-3" placeholder="Qo'shimcha izoh"></textarea>
-                <div class="flex justify-end gap-2">
-                    <button type="button" id="co_cancel" class="px-3 py-1 border rounded">Bekor</button>
-                    <button type="submit" id="co_submit" class="px-3 py-1 bg-blue-600 text-white rounded">Yaratish</button>
+    <div id="create-order-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-[100] p-4">
+        <div class="bg-[#1e293b] border border-white/10 rounded-[2rem] w-full max-w-md p-8 shadow-2xl animate-in zoom-in duration-300">
+            <h3 class="text-2xl font-black text-white mb-6 flex items-center gap-3">
+                <span class="w-1.5 h-8 bg-indigo-500 rounded-full"></span>
+                Yangi buyurtma
+            </h3>
+            <form id="create-order-form" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Telefon raqam</label>
+                    <input id="co_phone" name="client_phone" class="w-full bg-slate-900/50 border border-white/10 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="+998..." required />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Mijoz ismi</label>
+                    <input id="co_name" name="client_name" class="w-full bg-slate-900/50 border border-white/10 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Ism" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Idishlar (dona)</label>
+                        <input id="co_bottles" name="bottles" type="number" value="1" min="1" class="w-full bg-slate-900/50 border border-white/10 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Izoh</label>
+                    <textarea id="co_note" name="note" rows="3" class="w-full bg-slate-900/50 border border-white/10 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Manzil yoki qo'shimcha ma'lumot"></textarea>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="button" id="co_cancel" class="flex-1 px-6 py-3 rounded-xl border border-white/10 text-slate-400 font-bold hover:bg-white/5 transition-all italic uppercase text-xs">Bekor qilish</button>
+                    <button type="submit" id="co_submit" class="flex-1 px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20 uppercase text-xs">Yaratish</button>
                 </div>
             </form>
         </div>
-    </div>
-            <div class="bg-white shadow-md border border-gray-200 p-6 rounded-xl mt-6 text-gray-800">
-                <h4 class="font-semibold mb-4">Bugungi buyurtmalar (ko‘rsatma)</h4>
-                <div class="text-sm text-gray-600">Buyurtma tasdiqlash paneli markaziy ustunda joylashgan.</div>
-            </div>
     </div>
 </div>
 
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const ctx = document.getElementById('courierWeeklyChart');
-    if (ctx) {
+    // Dinamik Chart Dizayni
+    const courierChartEl = document.getElementById('courierWeeklyChart');
+    if (courierChartEl) {
+        const chartCtx = courierChartEl.getContext('2d');
+        const gradient = chartCtx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(79, 70, 229, 0.4)');
+        gradient.addColorStop(1, 'rgba(79, 70, 229, 0)');
+
         const labels = {{ weekly_labels_json|safe }};
         const dataPoints = {{ weekly_data_json|safe }};
-        new Chart(ctx.getContext('2d'), {
+        
+        new Chart(chartCtx, {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{ label: 'Deliveries', data: dataPoints, backgroundColor: 'rgba(59,130,246,0.15)', borderColor: 'rgba(59,130,246,0.9)', fill: true, tension: 0.3 }]
+                datasets: [{ 
+                    label: 'Yetkazmalar', 
+                    data: dataPoints, 
+                    backgroundColor: gradient, 
+                    borderColor: '#6366f1', 
+                    borderWidth: 4,
+                    fill: true, 
+                    tension: 0.4,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#6366f1',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } },
+                    x: { grid: { display: false }, ticks: { color: '#64748b' } }
+                }
+            }
+
+            // expose to global so inline onclicks work from dynamically created HTML
+            window.acceptOrder = acceptOrder;
         });
     }
 </script>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script>
-    // Poll APIs and update map
-    let courierMarker = null;
-    let orderMarkers = {};
-    function initMap() {
-        const map = L.map('courierMap').setView([41.2995, 69.2401], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-        }).addTo(map);
-        return map;
-    }
-    const map = initMap();
 
-    function updatePositionOnMap(pos) {
-        if (!pos) return;
-        const lat = pos.lat; const lon = pos.lon;
-        if (!lat || !lon) return;
-        if (!courierMarker) {
-            courierMarker = L.marker([lat, lon], {title: 'Siz (kuryer)'}).addTo(map);
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const metricsUrl = '/courier_panel/api/metrics/';
+    const todayOrdersUrl = '/courier_panel/api/today_orders/';
+    const posUrl = '/courier_panel/api/position/';
+    const updatePosUrl = '/courier_panel/api/update_position/';
+    const createOrderUrl = '/courier_panel/api/create_order_by_courier/';
+    const confirmDeliveryUrl = '/courier_panel/api/confirm_delivery/';
+
+    // Elements
+    const todaysCountEl = document.getElementById('todaysCountEl');
+    const deliveredCountEl = document.getElementById('deliveredCountEl');
+    const todayOrdersList = document.getElementById('todayOrdersList');
+
+    // Map setup (Leaflet)
+    let map = null;
+    let courierMarker = null;
+    function initMap(){
+        try{
+            map = L.map('courierMap', { zoomControl: true, attributionControl: false }).setView([41.3153, 69.2797], 11);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        }catch(e){ console.warn('leaflet init failed', e); }
+    }
+
+    function updatePositionOnMap(pos){
+        if(!map) return;
+        if(!pos || !pos.lat || !pos.lon) return;
+        const lat = parseFloat(pos.lat);
+        const lon = parseFloat(pos.lon);
+        if(Number.isNaN(lat) || Number.isNaN(lon)) return;
+        if(!courierMarker){
+            courierMarker = L.marker([lat, lon]).addTo(map);
+            try{ map.setView([lat, lon], 13); }catch(e){}
         } else {
             courierMarker.setLatLng([lat, lon]);
         }
-        map.setView([lat, lon], 13);
     }
 
-    function updateOrdersOnMap(orders) {
-        // clear previous markers
-        Object.values(orderMarkers).forEach(m => map.removeLayer(m));
-        orderMarkers = {};
-        const statusColor = { 'pending':'gray', 'assigned':'blue', 'delivering':'orange', 'done':'green' };
-        Object.keys(orders).forEach(status => {
-            orders[status].forEach(o => {
-                if (o.lat && o.lon) {
-                    const m = L.circleMarker([o.lat, o.lon], {radius:6, color: statusColor[status]||'black'}).addTo(map).bindPopup(`<b>#${o.id}</b><br>${o.client || ''}<br>${o.phone || ''}`);
-                    orderMarkers[o.id] = m;
-                }
-            });
-        });
-    }
+    // Render today's orders into #todayOrdersList - modern card design
+    function renderTodayOrders(grouped){
+        if(!todayOrdersList) return;
+        
+        const allOrders = [
+            ...(grouped.pending || []),
+            ...(grouped.assigned || []),
+            ...(grouped.delivering || []),
+            ...(grouped.done || [])
+        ];
 
-    function renderTodayOrders(orders) {
-        const container = document.getElementById('todayOrdersList');
-        if (!container) return;
-        container.innerHTML = '';
-        for (const status of ['pending','assigned','delivering','done']) {
-            const items = orders[status] || [];
-            const section = document.createElement('div');
-            section.innerHTML = `<div class="font-medium mt-2">${status.toUpperCase()} (${items.length})</div>`;
-            items.forEach(o => {
-                const it = document.createElement('div');
-                it.className = 'mt-1 text-xs flex items-center justify-between';
-                const left = document.createElement('div');
-                left.innerHTML = `#${o.id} — ${o.client || '—'} — ${o.phone || '—'} — ${o.bottle_count} ta`;
-                it.appendChild(left);
-                // show confirm button for assigned/delivering orders
-                if (status === 'assigned' || status === 'delivering') {
-                    const btn = document.createElement('button');
-                    btn.className = 'ml-3 bg-green-500 text-white px-2 py-1 rounded text-xs';
-                    btn.innerText = 'Yetkazildi';
-                    btn.onclick = function(){
-                        // show payment modal to choose payment type and amount
-                        showPaymentModal(o, async function(payment){
-                            // payment = { type: 'cash'|'debt'|'click', amount: number }
-                            btn.disabled = true; btn.innerText = 'Tasdiqlanmoqda...';
-                            try{
-                                const r = await fetch('/courier_panel/api/confirm_delivery/', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({order_id: o.id, payment_type: payment.type, payment_amount: payment.amount})});
-                                const j = await r.json();
-                                if (j.status === 'ok'){
-                                    btn.innerText = 'Tasdiqlandi';
-                                    pollAll();
-                                } else {
-                                    alert('Xato: ' + (j.message||'')); btn.disabled = false; btn.innerText = 'Yetkazildi';
-                                }
-                            } catch (e){ console.error(e); btn.disabled = false; btn.innerText = 'Yetkazildi'; }
-                        });
-                    };
-                    it.appendChild(btn);
-                }
-                section.appendChild(it);
-            });
-            container.appendChild(section);
-        }
-    }
-
-    async function pollAll() {
-        try {
-            const [tResp, pResp] = await Promise.all([
-                fetch('/courier_panel/api/today_orders/'),
-                fetch('/courier_panel/api/position/')
-            ]);
-            const tJson = await tResp.json();
-            const pJson = await pResp.json();
-            if (tJson.status === 'ok') {
-                renderTodayOrders(tJson.data);
-                updateOrdersOnMap(tJson.data);
-            }
-            if (pJson.status === 'ok' && pJson.data) {
-                updatePositionOnMap(pJson.data);
-            }
-            // fetch simple metrics and update header counts
-            try {
-                const mResp = await fetch('/courier_panel/api/metrics/');
-                const mJson = await mResp.json();
-                if (mJson.status === 'ok' && mJson.data) {
-                    const d = mJson.data;
-                    const tEl = document.getElementById('todaysCountEl');
-                    const delEl = document.getElementById('deliveredCountEl');
-                    if (tEl) tEl.innerText = (d.todays_count || 0) + ' ta';
-                    if (delEl) delEl.innerText = (d.delivered_count || 0) + ' ta';
-                }
-            } catch (e) { console.error('metrics poll error', e); }
-            // also refresh new orders
-            try {
-                const nResp = await fetch('/courier_panel/api/new_orders/');
-                const nJson = await nResp.json();
-                if (nJson.status === 'ok') renderNewOrders(nJson.data);
-            } catch (e) {
-                console.error('new orders poll error', e);
-            }
-        } catch (e) {
-            console.error('poll error', e);
-        }
-    }
-
-    setInterval(pollAll, 5000);
-    // initial poll
-    pollAll();
-
-    // Payment modal helper (creates DOM on first use)
-    let paymentModal = null;
-    function showPaymentModal(order, cb){
-        if (!paymentModal){
-            paymentModal = document.createElement('div');
-            paymentModal.id = 'payment-modal';
-            paymentModal.className = 'fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 p-4';
-            paymentModal.innerHTML = `
-                <div class="w-full max-w-md bg-white rounded p-4 shadow-lg">
-                    <h3 class="text-lg font-semibold mb-2">To'lov turi va miqdori</h3>
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-2"><input type="radio" name="pay_type" value="cash" checked> Pul berdi (naqd)</label>
-                        <label class="flex items-center gap-2"><input type="radio" name="pay_type" value="debt"> Qarz bo'ldi</label>
-                        <label class="flex items-center gap-2"><input type="radio" name="pay_type" value="click"> Click/online</label>
-                        <div>
-                            <label class="block text-sm text-gray-700">Miqdor (UZS)</label>
-                            <input id="pay-amount" type="number" min="0" class="w-full border p-2 rounded" />
-                        </div>
-                        <div class="flex justify-end gap-2 mt-3">
-                            <button id="pay-cancel" class="px-3 py-2 rounded border">Bekor</button>
-                            <button id="pay-confirm" class="px-3 py-2 rounded bg-blue-600 text-white">Tasdiqlash</button>
-                        </div>
-                    </div>
-                </div>`;
-            document.body.appendChild(paymentModal);
-            // attach handlers
-            paymentModal.querySelector('#pay-cancel').addEventListener('click', ()=>{ paymentModal.classList.add('hidden'); });
-        }
-        // prefill amount (prefer debt_change if available, else compute from bottle_count*12000)
-        const defaultAmt = (order.debt_change && Number(order.debt_change)) ? Number(order.debt_change) : ((order.bottle_count||0)*12000);
-        paymentModal.querySelector('#pay-amount').value = defaultAmt;
-        // show modal
-        paymentModal.classList.remove('hidden');
-        const confirmBtn = paymentModal.querySelector('#pay-confirm');
-        const onConfirm = () => {
-            const type = paymentModal.querySelector('input[name="pay_type"]:checked').value;
-            const amt = parseFloat(paymentModal.querySelector('#pay-amount').value) || 0;
-            paymentModal.classList.add('hidden');
-            confirmBtn.removeEventListener('click', onConfirm);
-            cb({type: type, amount: amt});
-        };
-        confirmBtn.addEventListener('click', onConfirm);
-    }
-
-    // render new orders
-    function renderNewOrders(items) {
-        const container = document.getElementById('newOrdersList');
-        if (!container) return;
-        // update sidebar badge for new orders
-        try{
-            const badge = document.getElementById('newOrdersBadge');
-            const n = (items && items.length) ? items.length : 0;
-            if (badge){
-                if (n > 0){ badge.innerText = n>9 ? '9+' : String(n); badge.classList.remove('hidden'); }
-                else { badge.classList.add('hidden'); }
-            }
-        } catch(e){ console.error('badge update error', e); }
-
-        container.innerHTML = '';
-        if (!items || items.length === 0) {
-            container.innerHTML = '<div class="text-gray-500">Yangi buyurtma yo‘q</div>';
+        if(allOrders.length === 0){
+            todayOrdersList.innerHTML = `
+                <div class="text-center py-16">
+                    <i class="fa-solid fa-inbox text-6xl text-slate-600 mb-4"></i>
+                    <p class="text-slate-400 text-lg">Bugun buyurtma yo'q</p>
+                </div>
+            `;
             return;
         }
-        items.forEach(o => {
-            const row = document.createElement('div');
-            row.className = 'p-3 border rounded-md flex justify-between items-start';
-            const left = document.createElement('div');
-            left.innerHTML = `<div class="font-medium">#${o.id} — ${o.client || 'Anonim'}</div><div class="text-xs text-gray-500">${o.phone || ''} • ${new Date(o.date).toLocaleString()}</div><div class="text-xs mt-1">${o.note || ''}</div>`;
-            const right = document.createElement('div');
-            right.className = 'text-right';
-            const navBtn = document.createElement('a');
-            navBtn.className = 'inline-block bg-gray-100 px-3 py-1 rounded text-xs mr-2';
-            if (o.lat && o.lon) {
-                navBtn.href = `https://www.google.com/maps/search/?api=1&query=${o.lat},${o.lon}`;
-                navBtn.target = '_blank';
-                navBtn.innerText = 'Navigatsiya';
-            } else {
-                navBtn.innerText = 'Joylashuv yo‘q';
-                navBtn.className += ' opacity-50';
-            }
-            const acceptBtn = document.createElement('button');
-            acceptBtn.className = 'bg-blue-500 text-white px-3 py-1 rounded text-xs';
-            acceptBtn.innerText = 'Qabul qilish';
-            acceptBtn.onclick = async function() {
-                acceptBtn.disabled = true;
-                acceptBtn.innerText = 'Qabul qilinmoqda...';
-                try {
-                    const resp = await fetch('/courier_panel/api/accept_order/', {method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({order_id: o.id})});
-                    const j = await resp.json();
-                    if (j.status === 'ok') {
-                        acceptBtn.innerText = 'Qabul qilindi';
-                        // refresh lists
-                        pollAll();
-                    } else {
-                        acceptBtn.innerText = 'Xato';
-                        alert('Xato: ' + (j.message || ''));
-                        acceptBtn.disabled = false;
-                        acceptBtn.innerText = 'Qabul qilish';
-                    }
-                } catch (e) {
-                    console.error('accept error', e);
-                    acceptBtn.disabled = false;
-                    acceptBtn.innerText = 'Qabul qilish';
-                }
+
+        todayOrdersList.innerHTML = '';
+        
+        allOrders.forEach(order => {
+            const statusConfig = {
+                'pending': { bg: 'from-amber-600/10 to-orange-600/10', border: 'amber-500/30', text: 'amber-400', icon: 'fa-clock', label: 'Kutilmoqda' },
+                'assigned': { bg: 'from-blue-600/10 to-indigo-600/10', border: 'blue-500/30', text: 'blue-400', icon: 'fa-check-circle', label: 'Tayinlangan' },
+                'delivering': { bg: 'from-purple-600/10 to-pink-600/10', border: 'purple-500/30', text: 'purple-400', icon: 'fa-truck-fast', label: 'Yetkazilmoqda' },
+                'done': { bg: 'from-emerald-600/10 to-teal-600/10', border: 'emerald-500/30', text: 'emerald-400', icon: 'fa-check-double', label: 'Tugallangan' }
             };
-            right.appendChild(navBtn);
-            right.appendChild(acceptBtn);
-            row.appendChild(left);
-            row.appendChild(right);
-            container.appendChild(row);
+            
+            const config = statusConfig[order.status] || statusConfig['pending'];
+            
+            const card = document.createElement('div');
+            card.className = `bg-gradient-to-br ${config.bg} backdrop-blur-xl border border-${config.border} rounded-2xl p-4 hover:scale-[1.02] transition-all duration-300 cursor-pointer group`;
+            // derive a human-friendly payment label from raw payment_type
+            let paymentLabel = '';
+            try{
+                if(order.payment_type){
+                    const pt = String(order.payment_type).toLowerCase();
+                    if(pt === 'cash' || pt === 'naqd') paymentLabel = "Naqd (cash)";
+                    else if(pt === 'click' || pt === 'online') paymentLabel = "Click/Online";
+                    else if(pt === 'debt' || pt === 'qarz') paymentLabel = "Qarz (later)";
+                    else paymentLabel = pt.charAt(0).toUpperCase() + pt.slice(1);
+                }
+            }catch(e){}
+
+            card.innerHTML = `
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
+                            <i class="fa-solid ${config.icon} text-xl text-${config.text}"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-white text-lg">${order.client || 'Mijoz'}</div>
+                            <div class="text-xs text-slate-400 font-mono">#${order.id}</div>
+                        </div>
+                    </div>
+                    <span class="px-3 py-1 rounded-lg bg-${config.text}/20 text-${config.text} text-xs font-bold border border-${config.border}">
+                        ${config.label}
+                    </span>
+                </div>
+                
+                <div class="space-y-2 text-sm mb-3">
+                    ${order.phone ? `
+                        <div class="flex items-center gap-2 text-slate-300">
+                            <i class="fa-solid fa-phone text-${config.text} w-4"></i>
+                            <span>${order.phone}</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${order.bottles ? `
+                        <div class="flex items-center gap-2 text-slate-300">
+                            <i class="fa-solid fa-bottle-water text-${config.text} w-4"></i>
+                            <span>${order.bottles} dona idish</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${paymentLabel ? `
+                        <div class="flex items-center gap-2 text-slate-300">
+                            <i class="fa-solid fa-wallet text-${config.text} w-4"></i>
+                            <span>To'lov: ${paymentLabel}${order.payment_amount ? ' — ' + order.payment_amount + ' UZS' : ''}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                ${order.status === 'pending' ? `
+                    <button onclick="acceptOrder(${order.id})" 
+                            class="w-full px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-lg">
+                        <i class="fa-solid fa-hand-holding mr-2"></i>Qabul qilish
+                    </button>
+                ` : ''}
+                
+                ${(order.status === 'assigned' || order.status === 'delivering') ? `
+                    <button onclick="openConfirmDeliveryModal(${order.id}, ${JSON.stringify(order).replace(/"/g, '&quot;')})" 
+                            class="w-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg">
+                        <i class="fa-solid fa-check mr-2"></i>Yetkazildi deb belgilash
+                    </button>
+                ` : ''}
+            `;
+            
+            todayOrdersList.appendChild(card);
         });
     }
-</script>
-<script>
-// Create order modal logic
-const openCreateOrderBtn = document.getElementById('openCreateOrderBtn');
-const createOrderModal = document.getElementById('create-order-modal');
-const coCancel = document.getElementById('co_cancel');
-const coForm = document.getElementById('create-order-form');
-if (openCreateOrderBtn && createOrderModal) {
-    openCreateOrderBtn.addEventListener('click', ()=>{ createOrderModal.classList.remove('hidden'); createOrderModal.classList.add('flex'); });
-}
-if (coCancel) coCancel.addEventListener('click', ()=>{ createOrderModal.classList.add('hidden'); createOrderModal.classList.remove('flex'); });
 
-coForm && coForm.addEventListener('submit', async function(ev){
-    ev.preventDefault();
-    const submitBtn = document.getElementById('co_submit');
-    const orig = submitBtn.innerText;
-    submitBtn.disabled = true; submitBtn.innerText = 'Yaratilmoqda...';
-    const payload = {
-        client_phone: document.getElementById('co_phone').value.trim(),
-        client_name: document.getElementById('co_name').value.trim(),
-        bottles: Number(document.getElementById('co_bottles').value) || 1,
-        note: document.getElementById('co_note').value.trim(),
-    };
-    try{
-        const r = await fetch('/courier_panel/api/create_order_by_courier/', {method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)});
-        const j = await r.json();
-        if (j.status === 'ok'){
-            alert('Buyurtma yaratildi: #' + j.order_id);
-            createOrderModal.classList.add('hidden'); createOrderModal.classList.remove('flex');
-            // refresh lists
-            pollAll();
-        } else {
-            alert('Xato: ' + (j.message||'')); 
+    // Accept order function
+    async function acceptOrder(orderId) {
+        try {
+            const resp = await fetch('/courier_panel/api/accept_order/', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ order_id: orderId })
+            });
+            
+            if(resp && resp.ok) {
+                const j = await resp.json();
+                if(j && j.status === 'ok') {
+                    pollAll(); // Refresh data
+                } else {
+                    alert(j.message || 'Xatolik yuz berdi');
+                }
+            } else {
+                alert('Server javob bermadi');
+            }
+        } catch(e) {
+            console.error('Accept order failed:', e);
+            alert('Buyurtmani qabul qilishda xatolik');
         }
-    }catch(e){ alert('Xatolik: ' + e.message); }
-    submitBtn.disabled = false; submitBtn.innerText = orig;
+    }
+
+    // Polling loop: fetch metrics, today orders and position
+    async function pollAll(){
+        try{
+            // metrics
+            const m = await fetch(metricsUrl, { credentials: 'same-origin' });
+            if(m && m.ok){
+                const jm = await m.json();
+                if(jm && jm.data){
+                    if(todaysCountEl) todaysCountEl.innerText = (jm.data.todays_count || 0) + ' ta';
+                    if(deliveredCountEl) deliveredCountEl.innerText = (jm.data.delivered_count || 0) + ' ta';
+                }
+            }
+        }catch(e){ console.warn('metrics fetch failed', e); }
+
+        try{
+            const r = await fetch(todayOrdersUrl, { credentials: 'same-origin' });
+            if(r && r.ok){
+                const jr = await r.json();
+                if(jr && jr.data){
+                    renderTodayOrders(jr.data);
+                } else {
+                    renderTodayOrders({});
+                }
+            } else {
+                // ensure spinner removed and empty state shown
+                renderTodayOrders({});
+            }
+        }catch(e){ console.warn('today orders fetch failed', e); renderTodayOrders({}); }
+
+        try{
+            const p = await fetch(posUrl, { credentials: 'same-origin' });
+            if(p && p.ok){
+                const jp = await p.json();
+                if(jp && jp.data){ updatePositionOnMap(jp.data); }
+            }
+        }catch(e){ console.warn('position fetch failed', e); }
+    }
+
+    // start map and polling
+    initMap();
+    pollAll();
+    setInterval(pollAll, 8000);
+
+    // Create order modal behavior
+    const openBtn = document.getElementById('openCreateOrderBtn');
+    const modal = document.getElementById('create-order-modal');
+    const form = document.getElementById('create-order-form');
+    const cancelBtn = document.getElementById('co_cancel');
+
+    if(openBtn && modal){
+        openBtn.addEventListener('click', function(){ modal.classList.remove('hidden'); modal.classList.add('flex'); });
+    }
+    if(cancelBtn && modal){ cancelBtn.addEventListener('click', function(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }); }
+
+    if(form){
+        form.addEventListener('submit', async function(ev){
+            ev.preventDefault();
+            // prevent concurrent submissions from double-clicks
+            if(window._creatingOrder){ return; }
+            window._creatingOrder = true;
+            const submitBtn = document.getElementById('co_submit');
+            if(submitBtn) { submitBtn.disabled = true; }
+            const data = new FormData(form);
+            try{
+                const resp = await fetch(createOrderUrl, { method: 'POST', body: data, credentials: 'same-origin' });
+                const j = await resp.json();
+                if(j && j.status === 'ok'){
+                    // close modal and refresh today's orders
+                    if(modal){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+                    pollAll();
+                } else {
+                    alert((j && j.message) || 'Xatolik yuz berdi');
+                }
+            }catch(e){ console.warn('create order failed', e); alert('Internet bilan aloqa yo\'q'); }
+            if(submitBtn) { submitBtn.disabled = false; }
+            window._creatingOrder = false;
+        });
+    }
+
+    // Confirm Delivery modal behavior
+    let pendingConfirmOrderId = null;
+    const confirmModal = document.createElement('div');
+    confirmModal.id = 'confirm-delivery-modal';
+    confirmModal.className = 'fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-[110] p-4';
+    confirmModal.innerHTML = `
+        <div class="bg-[#1e293b] border border-white/10 rounded-[2rem] w-full max-w-sm p-6 shadow-2xl">
+            <h3 class="text-lg font-bold text-white mb-4">Buyurtmani Yetkazildi sifatida belgilash</h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs text-slate-400">To'lov usuli</label>
+                    <select id="cd_payment_type" class="w-full bg-slate-900/50 border border-white/10 rounded-xl p-2 text-white">
+                        <option value="cash">Naqd (cash)</option>
+                        <option value="click">Click/Online</option>
+                        <option value="debt">Qarz (later)</option>
+                        <option value="other">Boshqa</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-slate-400">To'lov miqdori (UZS)</label>
+                    <input id="cd_payment_amount" type="number" min="0" class="w-full bg-slate-900/50 border border-white/10 rounded-xl p-2 text-white" />
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button id="cd_cancel" class="flex-1 px-4 py-2 rounded-xl border border-white/10 text-slate-400 font-bold">Bekor</button>
+                    <button id="cd_confirm" class="flex-1 px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold">Tasdiqlash</button>
+                </div>
+                <div id="cd_status" class="text-sm text-slate-300 mt-3"></div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(confirmModal);
+
+    function openConfirmDeliveryModal(orderId, it){
+        pendingConfirmOrderId = orderId;
+        // also store on modal element to be robust against scope/closure issues
+        try{ confirmModal.dataset.orderId = String(orderId); }catch(e){}
+        try{
+            const amtInput = document.getElementById('cd_payment_amount');
+            if(amtInput){
+                // prefill with debt_change or 0
+                const pre = (it && it.debt_change) ? it.debt_change : 0;
+                amtInput.value = pre || 0;
+            }
+            // prefill payment type select if order info contains it
+            try{
+                const ptSelect = document.getElementById('cd_payment_type');
+                if(ptSelect && it && it.payment_type){
+                    // ensure valid value exists in select
+                    const val = String(it.payment_type).toLowerCase();
+                    const opt = Array.from(ptSelect.options).find(o => o.value === val);
+                    if(opt) ptSelect.value = val;
+                }
+            }catch(e){}
+        }catch(e){}
+        confirmModal.classList.remove('hidden'); confirmModal.classList.add('flex');
+    }
+
+    // expose openConfirmDeliveryModal globally for inline onclicks
+    window.openConfirmDeliveryModal = openConfirmDeliveryModal;
+
+    function closeConfirmModal(){ pendingConfirmOrderId = null; confirmModal.classList.add('hidden'); confirmModal.classList.remove('flex'); }
+    
+    // Helper function to get pending order ID
+    function getPendingOrderId(){
+        // prefer dataset on modal, fallback to variable
+        try{ const d = confirmModal.dataset.orderId; if(d) return parseInt(d); }catch(e){}
+        return pendingConfirmOrderId;
+    }
+
+    // modal buttons: attach direct listeners using event delegation on confirmModal
+    confirmModal.addEventListener('click', async function(ev){
+        // Use closest to detect clicks on inner elements (icons/text inside buttons)
+        const clicked = ev.target;
+        const cancelBtnEl = clicked.closest ? clicked.closest('#cd_cancel') : (clicked.id === 'cd_cancel' ? clicked : null);
+        const confirmBtnEl = clicked.closest ? clicked.closest('#cd_confirm') : (clicked.id === 'cd_confirm' ? clicked : null);
+
+        if(cancelBtnEl){
+            ev.preventDefault();
+            closeConfirmModal();
+            return;
+        }
+
+        if(confirmBtnEl){
+            ev.preventDefault();
+            const ptype = document.getElementById('cd_payment_type').value;
+            const pamt = document.getElementById('cd_payment_amount').value || 0;
+            const oid = getPendingOrderId();
+            if(!oid){ alert('Order id missing'); return; }
+
+            // Disable button during request
+            confirmBtnEl.disabled = true;
+            const prevText = confirmBtnEl.innerText;
+            confirmBtnEl.innerText = 'Yuklanmoqda...';
+
+            try{
+                const resp = await fetch(confirmDeliveryUrl, { 
+                    method: 'POST', 
+                    credentials: 'same-origin', 
+                    headers: {'Content-Type':'application/json'}, 
+                    body: JSON.stringify({ order_id: oid, payment_type: ptype, payment_amount: pamt }) 
+                });
+
+                if(resp && resp.ok){
+                    const j = await resp.json();
+                    if(j && j.status === 'ok'){
+                        closeConfirmModal();
+                        pollAll();
+                    } else {
+                        alert((j && j.message) || 'Xatolik');
+                    }
+                } else {
+                    const errText = await resp.text();
+                    console.error('Server response:', resp.status, errText);
+                    alert('Server javob bermadi: ' + resp.status);
+                }
+            }catch(e){ 
+                console.error('confirm delivery failed', e); 
+                alert("Internet bilan aloqa yo'q"); 
+            } finally {
+                // Re-enable button
+                confirmBtnEl.disabled = false;
+                confirmBtnEl.innerText = prevText || 'Tasdiqlash';
+            }
+        }
+    });
+
+    // optional: send location periodically to server if geolocation available
+    if(navigator.geolocation){
+        setInterval(function(){
+            navigator.geolocation.getCurrentPosition(async function(pos){
+                try{
+                    await fetch(updatePosUrl, { method: 'POST', body: JSON.stringify({ lat: pos.coords.latitude, lon: pos.coords.longitude }), credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } });
+                }catch(e){ /* ignore */ }
+            }, function(){}, { timeout: 5000 });
+        }, 15000);
+    }
 });
 </script>
+
+<style>
+    /* Leaflet dark mode filter tweak */
+    .leaflet-container { background: #0f172a !important; }
+    .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+</style>
 {% endblock %}
 
 {% endblock %}

@@ -1,0 +1,729 @@
+=================================================================
+ANDROID/KOTLIN MOBIL ILOVA - TO'LIQ TEXNIK VAZIFA VA PROMPT
+=================================================================
+
+LOYIHA NOMI: Suv Tashish - Ichimlik Suvi Yetkazib Berish Mobil Ilovasi
+
+=================================================================
+1. LOYIHA TAHLILI
+=================================================================
+
+BACKEND TEXNOLOGIYALARI:
+------------------------
+- Django REST Framework
+- JWT Authentication (SimpleJWT)
+- SQLite Database
+- CORS qo'llab-quvvatlash
+
+ASOSIY FUNKSIYALAR:
+-------------------
+- Client Panel: Mijozlar buyurtma berish, tarix ko'rish, balans boshqarish
+- Courier Panel: Kuryer uchun buyurtmalarni ko'rish va yetkazish
+- Admin Panel: Administrator uchun barcha operatsiyalarni boshqarish
+
+API ENDPOINTS:
+--------------
+- POST /client_panel/api/token/ - Login (JWT token olish)
+- POST /client_panel/api/token/refresh/ - Token yangilash
+- GET /client_panel/api/orders/ - Buyurtmalar ro'yxati
+- GET /client_panel/api/orders/my/?client_id={id} - Mening buyurtmalarim
+
+MAHSULOT NARXI:
+---------------
+- 1 dona suv: 12,000 UZS
+
+=================================================================
+2. ANDROID LOYIHA SOZLAMALARI
+=================================================================
+
+YANGI ANDROID STUDIO LOYIHASI:
+-------------------------------
+- Application Name: "Suv Tashish"
+- Package Name: com.suvtashish.client
+- Language: Kotlin
+- Minimum SDK: API 24 (Android 7.0)
+- Target SDK: API 34 (Android 14)
+
+=================================================================
+3. GRADLE DEPENDENCIES (build.gradle.kts)
+=================================================================
+
+dependencies {
+    // Core Android
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    
+    // Jetpack Compose (modern UI)
+    implementation(platform("androidx.compose:compose-bom:2024.01.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.activity:activity-compose:1.8.2")
+    
+    // Navigation
+    implementation("androidx.navigation:navigation-compose:2.7.6")
+    
+    // Networking (Retrofit + OkHttp)
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    
+    // ViewModel and LiveData
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
+    
+    // DataStore (preferences)
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    
+    // Google Maps (location)
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.android.gms:play-services-location:21.1.0")
+    
+    // Image loading (Coil)
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    
+    // Dependency Injection (Hilt)
+    implementation("com.google.dagger:hilt-android:2.50")
+    kapt("com.google.dagger:hilt-compiler:2.50")
+    implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
+}
+
+=================================================================
+4. ARXITEKTURA: MVVM + CLEAN ARCHITECTURE
+=================================================================
+
+PACKAGE STRUCTURE:
+------------------
+
+com.suvtashish.client/
+├── data/
+│   ├── api/
+│   │   ├── ApiService.kt                  # Retrofit API interface
+│   │   ├── AuthInterceptor.kt             # JWT token interceptor
+│   │   └── NetworkModule.kt               # Dagger Hilt network module
+│   ├── model/
+│   │   ├── Order.kt                       # Order data model
+│   │   ├── Client.kt                      # Client data model
+│   │   ├── LoginRequest.kt                # Login request DTO
+│   │   ├── LoginResponse.kt               # JWT response DTO
+│   │   └── ApiResponse.kt                 # Generic API response wrapper
+│   ├── repository/
+│   │   ├── AuthRepository.kt              # Authentication logic
+│   │   ├── OrderRepository.kt             # Order operations
+│   │   └── ClientRepository.kt            # Client profile operations
+│   └── local/
+│       ├── PreferencesManager.kt          # DataStore wrapper for tokens
+│       └── UserPreferences.kt             # User data model
+│
+├── domain/
+│   ├── usecase/
+│   │   ├── LoginUseCase.kt                # Login business logic
+│   │   ├── GetOrdersUseCase.kt            # Fetch orders logic
+│   │   ├── CreateOrderUseCase.kt          # Create order logic
+│   │   └── RefreshTokenUseCase.kt         # Token refresh logic
+│   └── Result.kt                           # Sealed class for API results
+│
+├── ui/
+│   ├── theme/
+│   │   ├── Color.kt                       # App colors
+│   │   ├── Theme.kt                       # Material3 theme
+│   │   └── Type.kt                        # Typography
+│   ├── navigation/
+│   │   └── NavGraph.kt                    # Navigation setup
+│   ├── screens/
+│   │   ├── auth/
+│   │   │   ├── LoginScreen.kt             # Login UI
+│   │   │   └── LoginViewModel.kt          # Login logic
+│   │   ├── dashboard/
+│   │   │   ├── DashboardScreen.kt         # Main dashboard
+│   │   │   └── DashboardViewModel.kt      # Dashboard logic
+│   │   ├── orders/
+│   │   │   ├── OrderListScreen.kt         # Order history
+│   │   │   ├── OrderDetailScreen.kt       # Order details
+│   │   │   ├── CreateOrderScreen.kt       # New order form
+│   │   │   └── OrderViewModel.kt          # Orders logic
+│   │   └── profile/
+│   │       ├── ProfileScreen.kt           # User profile
+│   │       └── ProfileViewModel.kt        # Profile logic
+│   └── components/
+│       ├── WaterBottleCard.kt             # Product card component
+│       ├── OrderCard.kt                   # Order list item
+│       ├── LoadingDialog.kt               # Loading indicator
+│       └── ErrorDialog.kt                 # Error message dialog
+│
+├── utils/
+│   ├── Constants.kt                        # App constants (API_BASE_URL, etc)
+│   ├── Extensions.kt                       # Kotlin extensions
+│   └── DateUtils.kt                        # Date formatting utilities
+│
+└── MainActivity.kt                         # Main entry point
+
+=================================================================
+5. ASOSIY KOD MISOLLARI
+=================================================================
+
+--- Constants.kt ---
+--------------------
+object Constants {
+    const val BASE_URL = "https://api.suvtashish.uz/"  // Sizning server addressingiz
+    const val BOTTLE_PRICE = 12000  // 1 dona narxi
+    
+    // Preferences keys
+    const val PREFS_NAME = "suv_tashish_prefs"
+    const val KEY_ACCESS_TOKEN = "access_token"
+    const val KEY_REFRESH_TOKEN = "refresh_token"
+    const val KEY_CLIENT_ID = "client_id"
+    const val KEY_PHONE = "phone"
+}
+
+--- DATA MODELS (data/model/) ---
+---------------------------------
+
+// Order.kt
+data class Order(
+    val id: Int,
+    val client: Client?,
+    val courier_id: Int?,
+    val created_at: String,
+    val delivered_at: String?,
+    val status: String,  // "pending", "assigned", "delivering", "done"
+    val bottle_count: Int,
+    val debt_change: Double,
+    val client_note: String?
+)
+
+// Client.kt
+data class Client(
+    val id: Int,
+    val full_name: String,
+    val phone: String,
+    val customer_id: String?
+)
+
+// LoginRequest.kt
+data class LoginRequest(
+    val username: String,  // Phone number
+    val password: String   // Password or OTP if implemented
+)
+
+// LoginResponse.kt
+data class LoginResponse(
+    val access: String,
+    val refresh: String
+)
+
+// CreateOrderRequest.kt
+data class CreateOrderRequest(
+    val bottle_count: Int,
+    val client_note: String?
+)
+
+--- API SERVICE (data/api/ApiService.kt) ---
+--------------------------------------------
+
+interface ApiService {
+    @POST("client_panel/api/token/")
+    suspend fun login(@Body request: LoginRequest): LoginResponse
+    
+    @POST("client_panel/api/token/refresh/")
+    suspend fun refreshToken(@Body request: Map<String, String>): LoginResponse
+    
+    @GET("client_panel/api/orders/my/")
+    suspend fun getMyOrders(@Query("client_id") clientId: Int): List<Order>
+    
+    @POST("client_panel/api/orders/")
+    suspend fun createOrder(@Body request: CreateOrderRequest): Order
+}
+
+--- AUTH INTERCEPTOR (data/api/AuthInterceptor.kt) ---
+-------------------------------------------------------
+
+class AuthInterceptor(
+    private val preferencesManager: PreferencesManager
+) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val request = chain.request()
+        val token = runBlocking { preferencesManager.getAccessToken() }
+        
+        val newRequest = if (token != null) {
+            request.newBuilder()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+        } else {
+            request
+        }
+        
+        return chain.proceed(newRequest)
+    }
+}
+
+--- REPOSITORY PATTERN (data/repository/OrderRepository.kt) ---
+----------------------------------------------------------------
+
+class OrderRepository @Inject constructor(
+    private val apiService: ApiService,
+    private val preferencesManager: PreferencesManager
+) {
+    suspend fun getMyOrders(): Result<List<Order>> {
+        return try {
+            val clientId = preferencesManager.getClientId()
+            val orders = apiService.getMyOrders(clientId)
+            Result.Success(orders)
+        } catch (e: Exception) {
+            Result.Error(e.message ?: "Unknown error")
+        }
+    }
+    
+    suspend fun createOrder(bottleCount: Int, note: String?): Result<Order> {
+        return try {
+            val request = CreateOrderRequest(bottleCount, note)
+            val order = apiService.createOrder(request)
+            Result.Success(order)
+        } catch (e: Exception) {
+            Result.Error(e.message ?: "Failed to create order")
+        }
+    }
+}
+
+// Result sealed class
+sealed class Result<out T> {
+    data class Success<T>(val data: T) : Result<T>()
+    data class Error(val message: String) : Result<Nothing>()
+    object Loading : Result<Nothing>()
+}
+
+--- VIEWMODEL EXAMPLE (ui/screens/dashboard/DashboardViewModel.kt) ---
+-----------------------------------------------------------------------
+
+@HiltViewModel
+class DashboardViewModel @Inject constructor(
+    private val orderRepository: OrderRepository,
+    private val preferencesManager: PreferencesManager
+) : ViewModel() {
+    
+    private val _orders = MutableStateFlow<Result<List<Order>>>(Result.Loading)
+    val orders: StateFlow<Result<List<Order>>> = _orders.asStateFlow()
+    
+    private val _clientInfo = MutableStateFlow<Client?>(null)
+    val clientInfo: StateFlow<Client?> = _clientInfo.asStateFlow()
+    
+    init {
+        loadOrders()
+    }
+    
+    fun loadOrders() {
+        viewModelScope.launch {
+            _orders.value = Result.Loading
+            _orders.value = orderRepository.getMyOrders()
+        }
+    }
+    
+    fun createOrder(bottleCount: Int, note: String?) {
+        viewModelScope.launch {
+            when (val result = orderRepository.createOrder(bottleCount, note)) {
+                is Result.Success -> {
+                    // Refresh orders list
+                    loadOrders()
+                }
+                is Result.Error -> {
+                    // Show error message
+                }
+                else -> {}
+            }
+        }
+    }
+}
+
+--- COMPOSE UI EXAMPLE (ui/screens/dashboard/DashboardScreen.kt) ---
+---------------------------------------------------------------------
+
+@Composable
+fun DashboardScreen(
+    viewModel: DashboardViewModel = hiltViewModel(),
+    navController: NavController
+) {
+    val orders by viewModel.orders.collectAsState()
+    val clientInfo by viewModel.clientInfo.collectAsState()
+    
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Suv Tashish") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { navController.navigate("create_order") }
+            ) {
+                Icon(Icons.Default.Add, "Yangi buyurtma")
+            }
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            // Client Info Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = clientInfo?.full_name ?: "Mijoz",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Text(
+                        text = clientInfo?.phone ?: "",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            // Orders List
+            when (orders) {
+                is Result.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+                is Result.Success -> {
+                    val orderList = (orders as Result.Success<List<Order>>).data
+                    LazyColumn {
+                        items(orderList) { order ->
+                            OrderCard(
+                                order = order,
+                                onClick = { 
+                                    navController.navigate("order_detail/${order.id}") 
+                                }
+                            )
+                        }
+                    }
+                }
+                is Result.Error -> {
+                    ErrorView(
+                        message = (orders as Result.Error).message,
+                        onRetry = { viewModel.loadOrders() }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OrderCard(order: Order, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    text = "${order.bottle_count} dona",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = order.created_at,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            StatusChip(status = order.status)
+        }
+    }
+}
+
+@Composable
+fun StatusChip(status: String) {
+    val color = when (status) {
+        "pending" -> Color(0xFFFFA726)
+        "assigned" -> Color(0xFF42A5F5)
+        "delivering" -> Color(0xFF66BB6A)
+        "done" -> Color(0xFF26C6DA)
+        else -> Color.Gray
+    }
+    
+    val text = when (status) {
+        "pending" -> "Kutilmoqda"
+        "assigned" -> "Tayinlangan"
+        "delivering" -> "Yetkazilmoqda"
+        "done" -> "Yetkazildi"
+        else -> status
+    }
+    
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = color.copy(alpha = 0.2f)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            color = color,
+            style = MaterialTheme.typography.labelMedium
+        )
+    }
+}
+
+--- NAVIGATION SETUP (ui/navigation/NavGraph.kt) ---
+----------------------------------------------------
+
+@Composable
+fun NavGraph(
+    navController: NavHostController,
+    startDestination: String
+) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination
+    ) {
+        composable("login") {
+            LoginScreen(
+                onLoginSuccess = {
+                    navController.navigate("dashboard") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                }
+            )
+        }
+        
+        composable("dashboard") {
+            DashboardScreen(navController = navController)
+        }
+        
+        composable("create_order") {
+            CreateOrderScreen(
+                onOrderCreated = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        
+        composable(
+            route = "order_detail/{orderId}",
+            arguments = listOf(navArgument("orderId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            OrderDetailScreen(
+                orderId = backStackEntry.arguments?.getInt("orderId") ?: 0,
+                navController = navController
+            )
+        }
+        
+        composable("profile") {
+            ProfileScreen(navController = navController)
+        }
+    }
+}
+
+--- MAINACTIVITY.KT ---
+-----------------------
+
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            SuvTashishTheme {
+                val navController = rememberNavController()
+                
+                // Check if user is logged in
+                val preferencesManager = remember { PreferencesManager(this) }
+                val isLoggedIn = remember { mutableStateOf(false) }
+                
+                LaunchedEffect(Unit) {
+                    preferencesManager.getAccessToken().collect { token ->
+                        isLoggedIn.value = token != null
+                    }
+                }
+                
+                NavGraph(
+                    navController = navController,
+                    startDestination = if (isLoggedIn.value) "dashboard" else "login"
+                )
+            }
+        }
+    }
+}
+
+=================================================================
+6. ASOSIY XUSUSIYATLAR
+=================================================================
+
+1. OFFLINE MODE (Room Database)
+   - Buyurtmalar tarixini offline cache qilish
+   - Tarmoq yo'q bo'lganda ma'lumotlarni ko'rsatish
+
+2. PUSH NOTIFICATIONS (Firebase Cloud Messaging)
+   - Buyurtma holati o'zgarganda xabar olish
+   - Yangi aksiyalar haqida bildirishnomalar
+
+3. LOCATION SERVICES
+   - Mijoz manziliga Google Maps orqali navigatsiya
+   - Joriy joylashuvni aniqlash
+
+4. ERROR HANDLING
+   - Network errors (timeout, no connection)
+   - Authentication errors (token expired)
+   - Server errors (500, 400)
+   - User-friendly xabarlar
+
+5. SECURITY
+   - JWT token xavfsiz saqlash (EncryptedSharedPreferences)
+   - HTTPS faqat
+   - Certificate pinning (production uchun)
+
+=================================================================
+7. TESTING
+=================================================================
+
+--- UNIT TESTS ---
+------------------
+
+class OrderViewModelTest {
+    @Test
+    fun `when createOrder is called, order is added to list`() = runTest {
+        // Arrange
+        val repository = FakeOrderRepository()
+        val viewModel = DashboardViewModel(repository, preferencesManager)
+        
+        // Act
+        viewModel.createOrder(10, "Test note")
+        
+        // Assert
+        val orders = viewModel.orders.value
+        assertTrue(orders is Result.Success)
+        assertEquals(1, (orders as Result.Success).data.size)
+    }
+}
+
+--- UI TESTS (Compose) ---
+--------------------------
+
+@Test
+fun dashboard_displaysOrders() {
+    composeTestRule.setContent {
+        DashboardScreen(viewModel = viewModel, navController = navController)
+    }
+    
+    composeTestRule.onNodeWithText("10 dona").assertIsDisplayed()
+}
+
+=================================================================
+8. DEPLOYMENT
+=================================================================
+
+RELEASE APK:
+------------
+1. Build > Generate Signed Bundle/APK
+2. Keystore yaratish yoki mavjud keystore ishlatish
+3. Release variant tanlash
+4. APK yoki AAB (Android App Bundle) generate qilish
+
+GOOGLE PLAY CONSOLE:
+--------------------
+1. Developer account ochish
+2. Yangi app yaratish
+3. Screenshots, description, icon qo'shish
+4. Internal testing -> Closed testing -> Open testing -> Production
+5. Publish qilish
+
+=================================================================
+9. DIZAYN QOIDALAR
+=================================================================
+
+MATERIAL DESIGN 3:
+------------------
+- Modern, gradient backgrounds
+- Glassmorphism effects (backdrop blur)
+- Smooth animations
+- Dark theme support
+
+COLOR SCHEME:
+-------------
+val PrimaryBlue = Color(0xFF3B82F6)
+val SecondaryPurple = Color(0xFF8B5CF6)
+val DarkBackground = Color(0xFF0F172A)
+val CardBackground = Color(0xFF1E293B)
+
+=================================================================
+10. QISQACHA KEYINGI QADAMLAR
+=================================================================
+
+1. ✓ Android Studio'da yangi proyekt yaratish
+2. ✓ Dependencies qo'shish (Retrofit, Compose, Hilt)
+3. ✓ Package structure yaratish
+4. ✓ Data models va API service yozish
+5. ✓ Repository pattern implementatsiya qilish
+6. ✓ ViewModels yaratish
+7. ✓ UI Screens (Compose) yozish
+8. ✓ Navigation sozlash
+9. ✓ Authentication flow implementatsiya qilish
+10. ✓ Testing va debugging
+11. ✓ Release APK yaratish
+
+=================================================================
+11. QO'SHIMCHA MASLAHATLAR
+=================================================================
+
+PERFORMANCE:
+------------
+- LazyColumn ishlatish (RecyclerView o'rniga)
+- remember va derivedStateOf untuk cache calculations
+- Coil library image loading uchun
+- Paging library katta list'lar uchun
+
+SECURITY BEST PRACTICES:
+------------------------
+- ProGuard/R8 code obfuscation
+- Root detection
+- SSL Pinning
+- Sensitive data encryption
+
+MODERN ANDROID FEATURES:
+------------------------
+- Material You (Dynamic Colors)
+- Splash Screen API
+- Edge-to-edge UI
+- Predictive Back Gesture
+
+LOCALIZATION:
+-------------
+- strings.xml da barcha matnlar
+- O'zbek tili (Lotin va Kirill)
+- Rus tili qo'llab-quvvatlash
+
+=================================================================
+
+OMAD TILAYMAN! 🚀
+
+Ushbu texnik vazifa va promptdan foydalanib, to'liq professional 
+Android/Kotlin ilovasi yaratishingiz mumkin. Barcha zamonaviy 
+texnologiyalar va best practice'lar qo'llanilgan.
+
+=================================================================

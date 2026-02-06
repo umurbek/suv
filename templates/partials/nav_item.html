@@ -1,0 +1,7 @@
+<a href="{{ link }}" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 {% if link in request.path %}nav-link-active{% endif %}">
+    <i class="fa-solid {{ icon }} w-5"></i>
+    <span class="text-sm font-semibold">{{ text }}</span>
+    {% if badge %}
+        <span id="{{ badge }}" class="ml-auto inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-full text-xs bg-red-500 text-white" style="display:none;"></span>
+    {% endif %}
+</a>

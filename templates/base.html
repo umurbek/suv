@@ -49,13 +49,17 @@
                 <p class="text-[10px] uppercase font-bold text-slate-500 mb-2">Hozirgi profil</p>
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-400 flex items-center justify-center text-white text-xs font-bold">
-                        {% if request.session.admin_name %}{{ request.session.admin_name|slice:":1" }}{% else %}A{% endif %}
+                        {% if request.session.courier_name %}{{ request.session.courier_name|slice:":1"|upper }}
+                        {% elif request.session.client_name %}{{ request.session.client_name|slice:":1"|upper }}
+                        {% elif request.user.is_authenticated %}{{ request.user.username|slice:":1"|upper }}
+                        {% else %}A{% endif %}
                     </div>
                     <div class="overflow-hidden">
                         <p class="text-sm font-bold text-white truncate">
                             {% if request.session.courier_name %}{{ request.session.courier_name }}
                             {% elif request.session.client_name %}{{ request.session.client_name }}
-                            {% else %}{{ request.session.admin_name|default:'Administrator' }}{% endif %}
+                            {% elif request.user.is_authenticated %}{{ request.user.username }}
+                            {% else %}Administrator{% endif %}
                         </p>
                         <p class="text-[10px] text-emerald-500 flex items-center gap-1">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Online
@@ -69,6 +73,7 @@
                 {% include "partials/nav_item.html" with link="/courier_panel/dashboard/" icon="fa-house" text=T.dashboard|default:'Dashboard' %}
                 {% include "partials/nav_item.html" with link="/courier_panel/new_orders/" icon="fa-bell" text=T.new_orders|default:'Yangi buyurtmalar' badge="newOrdersBadge" %}
                 {% include "partials/nav_item.html" with link="/courier_panel/history/" icon="fa-clock-rotate-left" text=T.history|default:'Tarix' %}
+                {% include "partials/nav_item.html" with link="/courier_panel/profile/" icon="fa-user-gear" text="Profil" %}
             
             {% elif request.session.client_id and '/client_panel/' in request.path %}
                 <p class="px-4 text-[10px] font-bold text-slate-600 uppercase mb-2">Mijoz menyusi</p>
@@ -81,6 +86,11 @@
                 <a href="/admin_panel/dashboard/" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 {% if '/admin_panel/dashboard/' in request.path %}nav-link-active{% endif %}">
                     <i class="fa-solid fa-chart-pie w-5"></i> <span class="text-sm font-semibold">Dashboard</span>
                 </a>
+                <a href="/admin_panel/profile/" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 {% if '/admin_panel/profile/' in request.path %}nav-link-active{% endif %}">
+                    <i class="fa-solid fa-user-gear w-5"></i> <span class="text-sm font-semibold">Profil</span>
+                </a>
+
+
                 <a href="/admin_panel/orders/" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 {% if '/admin_panel/orders/' in request.path %}nav-link-active{% endif %}">
                     <i class="fa-solid fa-cart-shopping w-5"></i> <span class="text-sm font-semibold">Buyurtmalar</span>
                 </a>
@@ -127,7 +137,7 @@
                 <span class="font-bold text-white tracking-tight">AQUAFLOW</span>
             </div>
             <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10">
-                <span class="text-xs font-bold">{{ request.session.admin_name|slice:":1"|default:"A" }}</span>
+                <span class="text-xs font-bold">{% if request.user.is_authenticated %}{{ request.user.username|slice:":1"|upper }}{% else %}A{% endif %}</span>
             </div>
         </header>
 
@@ -165,6 +175,19 @@
                 <i class="fa-solid fa-receipt text-xl"></i>
             </a>
             <a href="/client_panel/profile/" class="p-3 rounded-2xl {% if '/profile/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
+                <i class="fa-solid fa-user text-xl"></i>
+            </a>
+        {% elif '/courier_panel/' in request.path %}
+            <a href="/courier_panel/dashboard/" class="p-3 rounded-2xl {% if '/dashboard/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
+                <i class="fa-solid fa-house text-xl"></i>
+            </a>
+            <a href="/courier_panel/new_orders/" class="p-3 rounded-2xl {% if '/new_orders/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
+                <i class="fa-solid fa-bell text-xl"></i>
+            </a>
+            <a href="/courier_panel/history/" class="p-3 rounded-2xl {% if '/history/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
+                <i class="fa-solid fa-clock-rotate-left text-xl"></i>
+            </a>
+            <a href="/courier_panel/profile/" class="p-3 rounded-2xl {% if '/profile/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
                 <i class="fa-solid fa-user text-xl"></i>
             </a>
         {% endif %}

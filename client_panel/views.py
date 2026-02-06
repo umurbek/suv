@@ -85,6 +85,31 @@ def orders_view(request):
     return render(request, 'client/orders.html', {'client': client, 'orders': orders})
 
 
+def api_client_orders(request):
+    """Return JSON list of orders for the logged-in client."""
+    if not request.session.get('client_id'):
+        return JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=403)
+    client = Client.objects.filter(id=request.session.get('client_id')).first()
+    if not client:
+        return JsonResponse({'status': 'error', 'message': 'Client not found'}, status=404)
+    items = []
+    try:
+        from suv_tashish_crm.models import Order
+        qs = Order.objects.filter(client=client).order_by('-created_at')[:100]
+        for o in qs:
+            items.append({
+                'id': o.id,
+                'created_at': o.created_at.isoformat() if getattr(o, 'created_at', None) else '',
+                'status': o.status,
+                'bottles': o.bottle_count,
+                'note': getattr(o, 'client_note', ''),
+                'amount': int(o.debt_change) if getattr(o, 'debt_change', None) is not None else 0,
+            })
+    except Exception:
+        items = []
+    return JsonResponse({'status': 'ok', 'data': items})
+
+
 def profile_view(request):
     # Show profile edit form
     client = None

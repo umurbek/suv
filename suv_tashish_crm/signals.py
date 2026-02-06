@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import Admin, Courier, Client
+from .models import Admin, Courier, Client, Notification
 
 
 def _get_telegram_config():
@@ -67,3 +67,11 @@ def client_created(sender, instance, created, **kwargs):
     region_name = region.name if region else ''
     text = f"👤 Yangi Mijoz qo'shildi\nIsm: {name}\nTelefon: {phone}\nID: {cid}\nHudud: {region_name}"
     send_telegram_message(text)
+    # Also create an in-app notification for admins
+    try:
+        Notification.objects.create(title='Yangi mijoz', message=text)
+    except Exception:
+        try:
+            print('Failed to create in-app notification for new client')
+        except Exception:
+            pass

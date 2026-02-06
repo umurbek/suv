@@ -13,31 +13,44 @@ def send_telegram(text: str, bot_token: str = None, chat_id: str = None, silent:
 
     Returns True on success, False otherwise. Errors are logged and swallowed unless `silent` is False.
     """
+    # If not silent, we can't easily raise from a thread, so we just log errors.
+    # To avoid blocking the main thread (especially when looping over many couriers),
+    # we run the actual request in a separate thread.
+    
+    import threading
+
+    def _worker(token, chat, txt):
+        try:
+            url = f'https://api.telegram.org/bot{token}/sendMessage'
+            payload = {'chat_id': chat, 'text': txt}
+            resp = requests.post(url, json=payload, timeout=10)
+            ok = False
+            try:
+                j = resp.json()
+                ok = j.get('ok', False)
+            except Exception:
+                ok = resp.status_code == 200
+            _log(f'SEND text={txt[:20]!r}... status={resp.status_code} ok={ok}')
+        except Exception as e:
+            _log(f'EXCEPTION sending text={txt[:20]!r}... error={e!s}')
+
     try:
         if bot_token is None:
             bot_token = getattr(settings, 'TELEGRAM_BOT_TOKEN', None)
         if chat_id is None:
             chat_id = getattr(settings, 'TELEGRAM_CHAT_ID', None)
+        
         if not bot_token or not chat_id:
             if not silent:
-                print('Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in settings')
+                print('Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID')
             _log(f'MISSING_CONFIG text={text!r}')
             return False
 
-        url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
-        payload = {'chat_id': chat_id, 'text': text}
-        resp = requests.post(url, json=payload, timeout=10)
-        ok = False
-        try:
-            j = resp.json()
-            ok = j.get('ok', False)
-        except Exception:
-            ok = resp.status_code == 200
-
-        _log(f'SEND text={text!r} status={resp.status_code} ok={ok} resp={resp.text!r}')
-        return ok
+        t = threading.Thread(target=_worker, args=(bot_token, chat_id, text))
+        t.start()
+        return True
     except Exception as e:
-        _log(f'EXCEPTION sending text={text!r} error={e!s}')
+        _log(f'THREAD_START_ERROR error={e!s}')
         if not silent:
             raise
         return False

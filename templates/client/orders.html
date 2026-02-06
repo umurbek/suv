@@ -3,37 +3,106 @@
 {% block title %}Buyurtmalarim{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto px-4 pb-24">
-  <div class="space-y-3 mt-3">
-    <h2 class="text-lg font-semibold">Buyurtmalarim</h2>
-    {% if orders and orders|length > 0 %}
-      {% for o in orders %}
-      <div class="bg-white rounded-lg shadow p-4">
-        <div class="flex items-start justify-between">
-          <div>
-            <div class="font-semibold">Buyurtma #{{ o.id }}</div>
-            <div class="text-xs text-gray-400">{{ o.created_at }}</div>
+<div class="max-w-2xl mx-auto px-4 pb-24">
+  <div class="space-y-4 mt-4">
+    <h2 class="text-2xl font-extrabold text-white">{{ T.my_orders|default:'Buyurtmalarim' }}</h2>
+    <div id="orders-list" class="space-y-3">
+      {% if orders and orders|length > 0 %}
+        {% for o in orders %}
+        <div class="bg-white/5 rounded-2xl p-4 border border-white/5 shadow-inner" data-order-id="{{ o.id }}">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="font-bold text-white">#{{ o.id }} <span class="text-xs text-slate-400 ml-2">{{ o.created_at }}</span></div>
+              <div class="text-sm text-slate-300 mt-2">{{ o.bottles }} ta</div>
+            </div>
+            <div class="text-right">
+              <div class="status-pill inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold {% if o.status == 'done' %}status-completed{% elif o.status == 'delivering' or o.status == 'assigned' %}status-pending{% else %}status-other{% endif %}">
+                {% if o.status == 'done' %}{{ T.delivered|default:'Yetkazildi' }}{% elif o.status == 'delivering' or o.status == 'assigned' %}{{ T.in_progress|default:'Jarayonda' }}{% else %}{{ o.status }}{% endif %}
+              </div>
+              <div class="text-sm text-slate-400 mt-2">{{ o.amount }} UZS</div>
+            </div>
           </div>
-          <div class="text-right">
-            {% if o.status == 'done' %}
-              <div class="text-green-600 font-semibold">{{ 'Yetkazildi' }}</div>
-            {% elif o.status == 'delivering' or o.status == 'assigned' %}
-              <div class="text-yellow-600 font-semibold">{{ 'Jarayonda' }}</div>
-            {% else %}
-              <div class="text-gray-600 font-semibold">{{ o.status }}</div>
-            {% endif %}
-            <div class="text-sm text-gray-500">{{ o.amount }} UZS</div>
-          </div>
+          {% if o.note %}
+          <div class="mt-3 text-sm text-slate-300">{{ T.note_label|default:'Izoh' }}: {{ o.note }}</div>
+          {% endif %}
         </div>
-        <div class="mt-3 text-sm text-gray-700">
-          <div>Bottles: <strong>{{ o.bottles }}</strong></div>
-          {% if o.note %}<div class="mt-2 text-gray-600">Izoh: {{ o.note }}</div>{% endif %}
-        </div>
-      </div>
-      {% endfor %}
-    {% else %}
-      <div class="mt-3 text-gray-600">Sizda hozircha buyurtma yo'q.</div>
-    {% endif %}
+        {% endfor %}
+        {% else %}
+        <div class="mt-6 text-slate-400 italic">{{ T.no_orders|default:"Sizda hozircha buyurtma yo'q." }}</div>
+      {% endif %}
+    </div>
   </div>
 </div>
+
+{% block extra_scripts %}
+<style>
+  .status-pill { border:1px solid rgba(255,255,255,0.06); }
+  .status-completed { background: rgba(16,185,129,0.12); color:#bbf7d0; border-color: rgba(16,185,129,0.18); }
+  .status-pending { background: rgba(250,204,21,0.12); color:#fef08a; border-color: rgba(250,204,21,0.18); }
+  .status-other { background: rgba(148,163,184,0.06); color:#94a3b8; border-color: rgba(255,255,255,0.04); }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const listEl = document.getElementById('orders-list');
+    const apiUrl = '/client_panel/api/orders/';
+
+    const labels = {
+        pending: "{{ T.pending|default:'Yangi' }}",
+        assigned: "{{ T.assigned|default:'Tayinlangan' }}",
+        delivering: "{{ T.in_progress|default:'Jarayonda' }}",
+        done: "{{ T.delivered|default:'Yetkazildi' }}",
+    };
+    const noteLabel = "{{ T.note_label|default:'Izoh' }}";
+
+    function formatOrder(o){
+        const div = document.createElement('div');
+        div.className = 'bg-white/5 rounded-2xl p-4 border border-white/5 shadow-inner';
+        div.setAttribute('data-order-id', o.id);
+        const statusLabel = labels[o.status] || o.status;
+        const statusClass = (o.status === 'done') ? 'status-completed' : ((o.status === 'delivering' || o.status === 'assigned') ? 'status-pending' : 'status-other');
+        div.innerHTML = `
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="font-bold text-white">#${o.id} <span class="text-xs text-slate-400 ml-2">${new Date(o.created_at).toLocaleString()}</span></div>
+                <div class="text-sm text-slate-300 mt-2">${o.bottles} ta</div>
+              </div>
+              <div class="text-right">
+                <div class="status-pill inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${statusClass}">${statusLabel}</div>
+                <div class="text-sm text-slate-400 mt-2">${o.amount} UZS</div>
+              </div>
+            </div>
+            ${o.note ? `<div class="mt-3 text-sm text-slate-300">${noteLabel}: ${o.note}</div>` : ''}
+        `;
+        return div;
+    }
+
+    async function fetchOrders(){
+        try{
+            const r = await fetch(apiUrl, { credentials: 'same-origin' });
+            if(!r.ok) throw new Error('fetch failed');
+            const j = await r.json();
+            if(j && j.data){
+                // clear and render
+                listEl.innerHTML = '';
+                if(j.data.length === 0){
+                    const empty = document.createElement('div');
+                    empty.className = 'mt-6 text-slate-400 italic';
+                    empty.innerText = '{{ T.no_orders|default:"Sizda hozircha buyurtma yo'q." }}';
+                    listEl.appendChild(empty);
+                } else {
+                    j.data.forEach(o => { listEl.appendChild(formatOrder(o)); });
+                }
+            }
+        }catch(e){
+            console.warn('orders fetch failed', e);
+        }
+    }
+
+    // initial load and periodic polling
+    fetchOrders();
+    setInterval(fetchOrders, 7000);
+});
+</script>
+{% endblock %}
 {% endblock %}

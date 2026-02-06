@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.db.models import Count, Sum, Q
-from suv_tashish_crm.models import Order, Client, Courier, Region
+from suv_tashish_crm.models import Order, Client, Courier, Region, Admin
 from django.utils import timezone
 import random
 from decimal import Decimal
@@ -10,12 +10,14 @@ import json
 import csv
 import os
 import re
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import get_user_model
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def admin_dashboard(request):
     # Auth guard temporarily disabled; re-enable when ready
-    today_orders = Order.objects.filter(created_at__date=datetime.date.today()).count()
+    today_orders = Order.objects.filter(created_at__date=timezone.localdate()).count()
     active_couriers = Courier.objects.filter(is_active=True).count()
     total_clients = Client.objects.count()
     debtors = Client.objects.filter(debt__gt=0).count()
@@ -73,7 +75,7 @@ def admin_dashboard(request):
     monthly_labels = []
     monthly_counts = []
     try:
-        today = datetime.date.today()
+        today = timezone.localdate()
         # last 7 days
         for i in range(6, -1, -1):
             day = today - datetime.timedelta(days=i)
@@ -159,45 +161,41 @@ def read_csv_data():
 
 
 def regions_view(request):
-    # Prefer DB-backed regions; fall back to CSV if DB is empty
+    """Show regions list. Uses DB if available, falls back to CSV data."""
+    static_regions = []
     try:
         static_regions = read_csv_data()
     except Exception:
         static_regions = []
 
-    # build a map from CSV region name -> CSV row for optional metadata
-    csv_map = { (r.get('name') or '').strip(): r for r in static_regions }
+    regions = []
+    locations = []
 
     try:
-        qs = Region.objects.order_by('name')
-        regions = []
-        seen_locations = set()
-        locations = []
-        for reg in qs:
-            name = reg.name
-            csv_row = csv_map.get(name, {})
-            loc = (csv_row.get('location') or '').strip()
-            bottle = csv_row.get('bottle') if csv_row else ''
-            phone = csv_row.get('phone') if csv_row else ''
+        qs = Region.objects.all()
+        for r in qs:
+            name = getattr(r, 'name', '')
+            bottle = getattr(r, 'bottle', '') if hasattr(r, 'bottle') else ''
+            loc = getattr(r, 'location', '') if hasattr(r, 'location') else ''
+            phone = getattr(r, 'phone', '') if hasattr(r, 'phone') else ''
             regions.append({'name': name, 'bottle': bottle, 'location': loc, 'phone': phone})
-            if loc and loc not in seen_locations:
-                seen_locations.add(loc)
+            if loc and loc not in locations:
                 locations.append(loc)
 
         # If DB has no regions but CSV does, show CSV rows instead
         if not regions and static_regions:
             regions = static_regions
-            seen_locations = set()
+            seen = set()
             locations = []
             for r in static_regions:
                 loc = (r.get('location') or '').strip()
-                if loc and loc not in seen_locations:
-                    seen_locations.add(loc)
+                if loc and loc not in seen:
+                    seen.add(loc)
                     locations.append(loc)
     except Exception:
         regions = static_regions
-        locations = []
         seen = set()
+        locations = []
         for r in regions:
             loc = (r.get('location') or '').strip()
             if loc and loc not in seen:
@@ -399,6 +397,100 @@ def clients_view(request):
         })
     return render(request, 'admin/clients.html', {'clients': clients})
 
+from django.shortcuts import render, redirect
+from django.http import JsonResponse
+from django.contrib.auth import get_user_model, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from .models import AdminProfile
+
+User = get_user_model()
+
+
+# =========================
+# PROFIL SAHIFASI
+# =========================
+from .models import AdminProfile
+
+
+def profile_view(request):
+    # Do not force redirect to login here; render profile page and
+    # show editable fields only for authenticated users.
+    admin_data = None
+    if request.user.is_authenticated:
+        # Admin profili yaratish yoki olish (default qiymatlar bilan)
+        admin_data, created = AdminProfile.objects.get_or_create(
+            user=request.user,
+            defaults={
+                'full_name': request.user.username,
+                'phone': '',
+                'role': 'Administrator'
+            }
+        )
+
+    # Barcha adminlar ro'yxatini olish (template uchun)
+    all_admins = Admin.objects.all()
+
+    return render(request, 'admin/profile.html', {
+        'admin_profile': admin_data,
+        'user': request.user,
+        'all_admins': all_admins,
+        'total_admins': all_admins.count(),
+    })
+
+# =========================
+# PROFILNI YANGILASH API
+# =========================
+@login_required(login_url='/admin_panel/login/')
+def api_update_profile(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Faqat POST so‘rov qabul qilinadi'}, status=405)
+
+    admin_name = request.POST.get('admin_name', '').strip()
+    username = request.POST.get('username', '').strip()
+    email = request.POST.get('email', '').strip()
+    password = request.POST.get('password', '').strip()
+
+    user = request.user
+
+    try:
+        # ===== USER =====
+        if username and username != user.username:
+            if User.objects.filter(username=username).exclude(id=user.id).exists():
+                return JsonResponse({'status': 'error', 'message': 'Bu login (username) band'}, status=400)
+            user.username = username
+
+        if email:
+            try:
+                validate_email(email)
+            except ValidationError:
+                return JsonResponse({'status': 'error', 'message': 'Email noto‘g‘ri formatda'}, status=400)
+            user.email = email
+
+        if admin_name:
+            user.first_name = admin_name
+
+        if password:
+            if len(password) < 8:
+                return JsonResponse({'status': 'error', 'message': 'Parol kamida 8 ta belgidan iborat bo‘lishi kerak'}, status=400)
+            user.set_password(password)
+
+        user.save()
+
+        if password:
+            update_session_auth_hash(request, user)  # parol o'zgarganda logout bo'lmasligi uchun
+
+        # ===== ADMIN PROFILE =====
+        AdminProfile.objects.update_or_create(
+            user=user,
+            defaults={'full_name': admin_name or user.get_full_name() or user.username}
+        )
+
+        return JsonResponse({'status': 'ok', 'message': 'Profil muvaffaqiyatli yangilandi'})
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Xatolik: {str(e)}'}, status=500)
 
 def notifications_api(request):
     """Return unseen notifications for admin panel (JSON)."""
@@ -816,44 +908,126 @@ def delete_courier(request, courier_id):
 
 
 def reports_view(request):
-    # Financial report: static monthly revenue for 12 months (will become dynamic later)
+    # Build weekly and monthly revenue datasets and top couriers for the template
     import json
-    # Build last-12-months labels and compute revenue from Orders.payment_amount when available
-    labels = []
-    data = []
+    from django.db.models import Q
+
     try:
+        today = timezone.localdate()
+    except Exception:
         today = datetime.date.today()
+
+    # Weekly: last 7 days (labels and sums)
+    weekly_labels = []
+    weekly_data = []
+    try:
+        for i in range(6, -1, -1):
+            day = today - datetime.timedelta(days=i)
+            weekly_labels.append(day.strftime('%a'))
+            # Sum payment_amount for orders delivered that day (prefer delivered_at, fallback to created_at)
+            qs = Order.objects.filter(
+                Q(delivered_at__date=day) | (Q(status='done') & Q(created_at__date=day))
+            )
+            total = qs.aggregate(total=Sum('payment_amount'))
+            val = total.get('total')
+            # fallback to count of delivered orders if payment_amount not set
+            if not val:
+                val = qs.count()
+            try:
+                weekly_data.append(int(val))
+            except Exception:
+                weekly_data.append(0)
+    except Exception:
+        weekly_labels = []
+        weekly_data = []
+
+    # Monthly: last 12 months
+    monthly_labels = []
+    monthly_data = []
+    try:
         for i in range(11, -1, -1):
-            month_date = (today.replace(day=1) - datetime.timedelta(days=0)) - datetime.timedelta(days=30 * i)
-            # month label in Uzbek short form (approx)
-            labels.append(month_date.strftime('%b'))
-        # More robust per-month aggregation
-        data = []
-        for i in range(11, -1, -1):
-            # compute the first day of the month `i` months ago
             ref = (today.replace(day=1) - datetime.timedelta(days=1)) - datetime.timedelta(days=30 * i)
             year = ref.year
             month = ref.month
-            # sum payment_amount for that month; treat None as 0
-            month_sum = Order.objects.filter(created_at__year=year, created_at__month=month).aggregate(total=Sum('payment_amount'))
-            total_val = month_sum.get('total') or 0
+            monthly_labels.append(ref.strftime('%b'))
+            qs = Order.objects.filter(
+                Q(delivered_at__year=year, delivered_at__month=month) | (Q(status='done') & Q(created_at__year=year, created_at__month=month))
+            )
+            total = qs.aggregate(total=Sum('payment_amount'))
+            val = total.get('total')
+            if not val:
+                val = qs.count()
             try:
-                total_int = int(total_val)
+                monthly_data.append(int(val))
             except Exception:
-                total_int = 0
-            data.append(total_int)
+                monthly_data.append(0)
     except Exception:
-        labels = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']
-        data = [0] * 12
+        monthly_labels = []
+        monthly_data = []
+
+    # Top couriers: percentage score relative to top performer (use delivered counts)
+    top_couriers = []
+    try:
+        qs = (
+            Order.objects.filter(status='done')
+            .values('courier__id', 'courier__full_name')
+            .annotate(delivered=Count('id'))
+            .order_by('-delivered')[:5]
+        )
+        max_delivered = 0
+        for i, t in enumerate(qs):
+            if i == 0:
+                max_delivered = t.get('delivered', 0) or 0
+            top_couriers.append({'id': t.get('courier__id'), 'name': t.get('courier__full_name') or '—', 'delivered': t.get('delivered', 0)})
+        for c in top_couriers:
+            try:
+                c['score'] = int((c['delivered'] / max_delivered) * 100) if max_delivered else 0
+            except Exception:
+                c['score'] = 0
+    except Exception:
+        top_couriers = []
 
     context = {
-        'revenue_labels': labels,
-        'revenue_data': data,
-        'revenue_labels_json': json.dumps(labels, ensure_ascii=False),
-        'revenue_data_json': json.dumps(data),
-        'unit_price': None,
+        'weekly_labels_json': json.dumps(weekly_labels, ensure_ascii=False),
+        'weekly_data_json': json.dumps(weekly_data),
+        'monthly_labels_json': json.dumps(monthly_labels, ensure_ascii=False),
+        'monthly_data_json': json.dumps(monthly_data),
+        'top_couriers': top_couriers,
     }
     return render(request, 'admin/reports.html', context)
+
+
+def courier_ranking_view(request):
+    """Show courier ranking based on number of delivered orders."""
+    try:
+        qs = (
+            Order.objects.filter(status='done')
+            .values('courier__id', 'courier__full_name')
+            .annotate(delivered=Count('id'))
+            .order_by('-delivered')
+        )
+        ranking = []
+        max_delivered = 0
+        for i, t in enumerate(qs):
+            if i == 0:
+                max_delivered = t.get('delivered', 0) or 0
+            ranking.append({
+                'id': t.get('courier__id'),
+                'name': t.get('courier__full_name') or '—',
+                'delivered': t.get('delivered', 0),
+            })
+    except Exception:
+        ranking = []
+        max_delivered = 0
+
+    # compute score percent relative to top performer
+    for r in ranking:
+        try:
+            r['score_percent'] = int((r['delivered'] / max_delivered) * 100) if max_delivered else 0
+        except Exception:
+            r['score_percent'] = 0
+
+    return render(request, 'admin/courier_ranking.html', {'ranking': ranking})
 
 
 def debtors_view(request):
@@ -1089,3 +1263,19 @@ def inactive_clients_view(request):
         })
 
     return render(request, 'admin/inactive_clients.html', {'clients': clients, 'cutoff_days': cutoff_days})
+
+
+@csrf_exempt
+def delete_order(request, order_id):
+    """Delete an order by ID."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'POST required'}, status=400)
+    
+    try:
+        order = Order.objects.get(pk=order_id)
+        order.delete()
+        return JsonResponse({'status': 'ok', 'message': 'Buyurtma o\'chirildi'})
+    except Order.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Buyurtma topilmadi'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

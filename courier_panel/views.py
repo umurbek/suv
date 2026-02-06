@@ -12,16 +12,8 @@ from django.utils import timezone
 # Simple in-memory store for courier positions (development only)
 COURIER_POSITIONS = {}
 
-# Static/demo entries to show on dashboard and API responses (developer/demo mode)
-STATIC_DEBTORS = [
-    {'id': 'S-1001', 'name': 'Static Mijoz 1', 'phone': '+998901112233', 'debt': 150000.0, 'days_overdue': 12},
-    {'id': 'S-1002', 'name': 'Static Mijoz 2', 'phone': '+998901112234', 'debt': 75000.0, 'days_overdue': 20},
-]
+# Static data removed
 
-STATIC_INACTIVE_CLIENTS = [
-    {'id': 'I-2001', 'name': 'Static Nofaol 1', 'phone': '+998902223344', 'last_order': (timezone.now()-timedelta(days=15)), 'days_since': 15},
-    {'id': 'I-2002', 'name': 'Static Nofaol 2', 'phone': '+998903334455', 'last_order': (timezone.now()-timedelta(days=30)), 'days_since': 30},
-]
 
 
 def dashboard(request):
@@ -35,7 +27,7 @@ def dashboard(request):
             courier = None
 
     # Today's orders assigned to this courier
-    today = timezone.now().date()
+    today = timezone.localdate()
     todays_orders_qs = Order.objects.filter(courier=courier, created_at__date=today)
     todays_count = todays_orders_qs.count()
 
@@ -46,7 +38,7 @@ def dashboard(request):
     deliveries_by_day = []
     labels = []
     for i in range(6, -1, -1):
-        day = timezone.now().date() - timedelta(days=i)
+        day = timezone.localdate() - timedelta(days=i)
         count = Order.objects.filter(courier=courier, created_at__date=day).count()
         labels.append(day.strftime('%a'))
         deliveries_by_day.append(count)
@@ -71,21 +63,15 @@ def dashboard(request):
             days_overdue = None
             if getattr(c, 'last_order', None):
                 try:
-                    days_overdue = (timezone.now().date() - c.last_order.date()).days
+                    days_overdue = (timezone.localdate() - c.last_order.date()).days
                 except Exception:
                     days_overdue = None
             debtors.append({'id': c.id, 'name': c.full_name, 'phone': c.phone, 'debt': float(c.debt or 0), 'days_overdue': days_overdue})
     except Exception:
         debtors = []
 
-    # Append static/demo debtors (avoid duplicates by id)
-    try:
-        existing_ids = {str(d.get('id')) for d in debtors}
-        for sd in STATIC_DEBTORS:
-            if str(sd.get('id')) not in existing_ids:
-                debtors.append(sd)
-    except Exception:
-        pass
+    # Static debtors logic removed
+
 
     # Inactive clients: no orders in last 10 days
     try:
@@ -96,23 +82,15 @@ def dashboard(request):
             days_since = None
             if getattr(c, 'last_order', None):
                 try:
-                    days_since = (timezone.now().date() - c.last_order.date()).days
+                    days_since = (timezone.localdate() - c.last_order.date()).days
                 except Exception:
                     days_since = None
             inactive_clients.append({'id': c.id, 'name': c.full_name, 'phone': c.phone, 'last_order': c.last_order.strftime('%Y-%m-%d') if c.last_order else None, 'days_since': days_since})
     except Exception:
         inactive_clients = []
 
-    # Append static/demo inactive clients (avoid duplicates)
-    try:
-        existing_ids = {str(c.get('id')) for c in inactive_clients}
-        for si in STATIC_INACTIVE_CLIENTS:
-            if str(si.get('id')) not in existing_ids:
-                # normalize last_order to string date for template
-                lo = si.get('last_order')
-                inactive_clients.append({'id': si.get('id'), 'name': si.get('name'), 'phone': si.get('phone'), 'last_order': lo.strftime('%Y-%m-%d') if lo else None, 'days_since': si.get('days_since')})
-    except Exception:
-        pass
+    # Static inactive clients logic removed
+
 
     context = {
         'courier': courier,
@@ -137,8 +115,7 @@ def api_metrics(request):
             courier = Courier.objects.get(pk=courier_id)
         except Courier.DoesNotExist:
             courier = None
-
-    today = timezone.now().date()
+    today = timezone.localdate()
     todays_count = Order.objects.filter(courier=courier, created_at__date=today).count()
     # total delivered (all-time) for this courier
     delivered_count = Order.objects.filter(courier=courier, status='done').count()
@@ -154,8 +131,18 @@ def api_today_orders(request):
         except Courier.DoesNotExist:
             courier = None
 
-    today = timezone.now().date()
-    qs = Order.objects.filter(courier=courier, created_at__date=today).order_by('-created_at')
+    today = timezone.localdate()
+    
+    # Get pending orders (no courier assigned yet) and orders assigned to this courier
+    from django.db.models import Q
+    if courier:
+        qs = Order.objects.filter(
+            Q(status='pending', courier__isnull=True) | Q(courier=courier),
+            created_at__date=today
+        ).order_by('-created_at')
+    else:
+        qs = Order.objects.filter(status='pending', courier__isnull=True, created_at__date=today).order_by('-created_at')
+    
     grouped = {'pending': [], 'assigned': [], 'delivering': [], 'done': []}
     for o in qs:
         client = o.client
@@ -167,8 +154,10 @@ def api_today_orders(request):
             'lat': getattr(client, 'location_lat', None),
             'lon': getattr(client, 'location_lon', None),
             'status': o.status,
-            'bottle_count': o.bottle_count,
-            'debt_change': float(o.debt_change or 0.0),
+                'bottles': o.bottle_count,
+                'debt_change': float(o.debt_change or 0.0),
+                'payment_type': getattr(o, 'payment_type', None),
+                'payment_amount': float(o.payment_amount) if getattr(o, 'payment_amount', None) is not None else None,
         }
         grouped.setdefault(o.status, []).append(item)
 
@@ -188,7 +177,7 @@ def api_weekly_stats(request):
     counts = []
     revenue = []
     for i in range(6, -1, -1):
-        day = timezone.now().date() - timedelta(days=i)
+        day = timezone.localdate() - timedelta(days=i)
         qs = Order.objects.filter(courier=courier, created_at__date=day)
         labels.append(day.strftime('%a'))
         counts.append(qs.count())
@@ -211,13 +200,26 @@ def api_history(request):
     qs = Order.objects.filter(courier=courier).order_by('-created_at')[:100]
     items = []
     for o in qs:
+        # prefer delivered_at for display date when available
+        display_date = (o.delivered_at or o.created_at)
+        # normalize payment info
+        p_type = getattr(o, 'payment_type', None) or ''
+        p_amount = None
+        try:
+            if getattr(o, 'payment_amount', None) is not None:
+                p_amount = float(o.payment_amount)
+        except Exception:
+            p_amount = None
+
         items.append({
             'id': o.id,
-            'date': o.created_at.isoformat(),
+            'date': display_date.isoformat() if display_date else None,
             'status': o.status,
             'client': o.client.full_name if o.client else None,
             'phone': o.client.phone if o.client else None,
             'debt_change': float(o.debt_change or 0.0),
+            'payment_type': p_type,
+            'payment_amount': p_amount,
         })
     return JsonResponse({'status': 'ok', 'data': items})
 
@@ -233,12 +235,8 @@ def api_debtors(request):
             'debt': float(c.debt or 0.0),
             'note': c.note or '',
         })
-    # include static/demo debtors
-    try:
-        for sd in STATIC_DEBTORS:
-            items.append({'id': sd.get('id'), 'full_name': sd.get('name'), 'phone': sd.get('phone'), 'debt': float(sd.get('debt') or 0.0), 'note': 'demo'})
-    except Exception:
-        pass
+    # Static debtors removed
+
     return JsonResponse({'status': 'ok', 'data': items})
 
 
@@ -254,12 +252,8 @@ def api_inactive_clients(request):
             'last_order': c.last_order.isoformat() if c.last_order else None,
             'total_orders': Order.objects.filter(client=c).count(),
         })
-    # include static/demo inactive clients
-    try:
-        for si in STATIC_INACTIVE_CLIENTS:
-            items.append({'id': si.get('id'), 'full_name': si.get('name'), 'phone': si.get('phone'), 'last_order': (si.get('last_order').isoformat() if si.get('last_order') else None), 'total_orders': 0})
-    except Exception:
-        pass
+    # Static inactive clients removed
+
     return JsonResponse({'status': 'ok', 'data': items})
 
 
@@ -324,6 +318,13 @@ def api_create_order_by_courier(request):
     except Exception:
         client = None
 
+    # light-weight request logging to help diagnose duplicate submissions
+    try:
+        with open('/tmp/create_order.log', 'a') as _lf:
+            _lf.write(f"{timezone.now().isoformat()} create_order request courier={courier_id} phone={phone} bottles={bottles} content_type={request.content_type}\n")
+    except Exception:
+        pass
+
     # create client if not exists
     if not client:
         try:
@@ -343,6 +344,18 @@ def api_create_order_by_courier(request):
         bottle_count = int(bottles or 1)
     except Exception:
         bottle_count = 1
+
+    # Deduplication: avoid creating duplicate orders when the same courier/client
+    # posts twice quickly (e.g., double-click). If a very recent order with same
+    # client and bottle_count exists (last 5 seconds), return that order instead.
+    try:
+        recent_cutoff = timezone.now() - timedelta(seconds=5)
+        recent_qs = Order.objects.filter(client=client, bottle_count=bottle_count, created_at__gte=recent_cutoff).order_by('-created_at')
+        if recent_qs.exists():
+            existing = recent_qs.first()
+            return JsonResponse({'status': 'ok', 'order_id': existing.id, 'note': 'duplicate_ignored'})
+    except Exception:
+        pass
 
     try:
         from decimal import Decimal
@@ -389,7 +402,7 @@ def api_accept_order(request):
 
     courier_id = request.session.get('courier_id')
     if not courier_id:
-        return JsonResponse({'status': 'error', 'message': 'no courier in session'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=401)
 
     try:
         order = Order.objects.get(pk=order_id)
@@ -402,14 +415,14 @@ def api_accept_order(request):
     try:
         courier = Courier.objects.get(pk=courier_id)
     except Courier.DoesNotExist:
-        # Clear invalid courier_id from session to avoid repeated errors
+        # Clear invalid courier_id from session
         try:
             request.session.pop('courier_id', None)
             request.session.pop('courier_name', None)
             request.session.pop('courier_phone', None)
         except Exception:
             pass
-        return JsonResponse({'status': 'error', 'message': "courier not found; set a valid courier session via /courier_panel/dev/login_as/<id> or /courier_panel/dev/set_session/<id>"}, status=404)
+        return JsonResponse({'status': 'error', 'message': "courier not found"}, status=401)
 
     order.courier = courier
     order.status = 'assigned'
@@ -495,24 +508,55 @@ def api_confirm_delivery(request):
         # if a payment_type indicates debt, increase client.debt; for cash/click, decrease debt
         try:
             client = order.client
-            if client and amt is not None and amt != 0:
+            if client:
+                from decimal import Decimal
                 from suv_tashish_crm.models import DebtHistory
+
+                # Determine effective amount to apply: prefer explicit amt, fallback to order.payment_amount or order.debt_change
+                amt_eff = None
+                try:
+                    if amt is not None:
+                        amt_eff = amt
+                    else:
+                        # try payment_amount on order
+                        pa = getattr(order, 'payment_amount', None)
+                        dc = getattr(order, 'debt_change', None)
+                        if pa is not None:
+                            try:
+                                amt_eff = Decimal(str(pa))
+                            except Exception:
+                                amt_eff = None
+                        elif dc is not None:
+                            try:
+                                amt_eff = Decimal(str(dc))
+                            except Exception:
+                                amt_eff = None
+                except Exception:
+                    amt_eff = None
+
                 if payment_type == 'debt':
-                    # client incurred new debt of amt
-                    client.debt = (client.debt or 0) + amt
-                    client.save()
-                    DebtHistory.objects.create(client=client, change=amt, comment=f'Order #{order.id} marked debt by courier {courier.id}')
-                elif payment_type in ('cash', 'click'):
-                    # payment received -> reduce debt (if any) and record
-                    try:
-                        client.debt = (client.debt or 0) - amt
+                    # If no explicit amount and no order values, nothing to add
+                    if amt_eff is not None and amt_eff != Decimal('0'):
+                        client_debt = getattr(client, 'debt', None) or Decimal('0')
+                        client.debt = client_debt + amt_eff
                         client.save()
-                    except Exception:
-                        pass
-                    try:
-                        DebtHistory.objects.create(client=client, change=-amt, comment=f'Payment received ({payment_type}) for order #{order.id} by courier {courier.id}')
-                    except Exception:
-                        pass
+                        try:
+                            DebtHistory.objects.create(client=client, change=amt_eff, comment=f'Order #{order.id} marked debt by courier {courier.id}')
+                        except Exception:
+                            pass
+                elif payment_type in ('cash', 'click'):
+                    # payment received -> reduce debt (if any) and record; use amt_eff if available
+                    if amt_eff is not None and amt_eff != Decimal('0'):
+                        client_debt = getattr(client, 'debt', None) or Decimal('0')
+                        try:
+                            client.debt = client_debt - amt_eff
+                            client.save()
+                        except Exception:
+                            pass
+                        try:
+                            DebtHistory.objects.create(client=client, change=-amt_eff, comment=f'Payment received ({payment_type}) for order #{order.id} by courier {courier.id}')
+                        except Exception:
+                            pass
         except Exception:
             pass
 
@@ -656,6 +700,18 @@ def api_get_position(request):
     return JsonResponse({'status': 'ok', 'data': pos})
 
 
+def api_get_position_for_id(request, courier_id):
+    """Return last-known position for given courier id (development in-memory store).
+
+    This allows admin or other viewers to query courier positions by id.
+    """
+    try:
+        pos = COURIER_POSITIONS.get(int(courier_id))
+    except Exception:
+        pos = None
+    return JsonResponse({'status': 'ok', 'data': pos})
+
+
 @csrf_exempt
 def api_update_position(request):
     # Accepts JSON: { lat, lon, order_id }
@@ -757,3 +813,45 @@ def contact_admin(request):
 
     context = {'courier': courier, 'admin': admin_info}
     return render(request, 'courier/contact_admin.html', context)
+
+
+def profile_view(request):
+    """Allow courier to view and edit their profile (dev helper).
+
+    The courier is determined by `request.session['courier_id']`. On POST we update
+    `full_name` and `phone` fields and redirect back to profile or dashboard.
+    """
+    courier = None
+    courier_id = request.session.get('courier_id')
+    if courier_id:
+        try:
+            courier = Courier.objects.get(pk=courier_id)
+        except Courier.DoesNotExist:
+            courier = None
+
+    if request.method == 'POST':
+        # simple form fields: full_name, phone, is_active
+        full_name = request.POST.get('full_name', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+        if courier:
+            try:
+                if full_name:
+                    courier.full_name = full_name
+                courier.phone = phone
+                courier.is_active = is_active
+                courier.save()
+                # update session display name/phone
+                try:
+                    request.session['courier_name'] = courier.full_name or ''
+                    request.session['courier_phone'] = courier.phone or ''
+                except Exception:
+                    pass
+                return redirect('courier_profile')
+            except Exception:
+                # fallback to showing the form with an error message
+                return render(request, 'courier/profile.html', {'courier': courier, 'error': 'Ma\'lumotlarni saqlashda xato yuz berdi.'})
+        else:
+            return redirect('courier_dashboard')
+
+    return render(request, 'courier/profile.html', {'courier': courier})

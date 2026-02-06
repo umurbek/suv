@@ -10,11 +10,13 @@ urlpatterns = [
     path('api/debtors/', views.api_debtors, name='courier_api_debtors'),
     path('api/inactive_clients/', views.api_inactive_clients, name='courier_api_inactive_clients'),
     path('api/position/', views.api_get_position, name='courier_api_get_position'),
+    path('api/position/<int:courier_id>/', views.api_get_position_for_id, name='courier_api_get_position_for_id'),
     path('api/metrics/', views.api_metrics, name='courier_api_metrics'),
     path('api/update_position/', views.api_update_position, name='courier_api_update_position'),
     # Dev helper to set session courier_id for simulation/testing
     path('dev/set_session/<int:courier_id>/', views.dev_set_session, name='courier_dev_set_session'),
     path('contact_admin/', views.contact_admin, name='courier_contact_admin'),
+    path('profile/', views.profile_view, name='courier_profile'),
     path('dev/login_as/<int:courier_id>/', views.dev_login_as, name='courier_dev_login_as'),
     # New orders & accept endpoints
     path('api/new_orders/', views.api_new_orders, name='courier_api_new_orders'),

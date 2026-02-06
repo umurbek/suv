@@ -26,7 +26,11 @@ SECRET_KEY = 'django-insecure-tmh!3n1^z)cwrc3!j7iq*rz%(&bwpexu+%b1&e^1ge3e)(qa6#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    '192.168.241.174',
+    '127.0.0.1',
+    'localhost'
+]
 
 
 # Application definition
@@ -108,6 +112,7 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+LOGIN_URL = '/admin_panel/dashboard/'  # yoki sizning login sahifa URL
 
 
 # Internationalization

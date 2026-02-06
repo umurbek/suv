@@ -3,47 +3,48 @@
 {% block title %}Profil{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto px-4 pb-24">
-    <div class="bg-blue-800/50 backdrop-blur-md text-white rounded-xl p-6 shadow-xl border border-white/20">
-        <div class="flex items-center space-x-4">
-            <div class="w-16 h-16 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center text-3xl shadow-inner">
-                <i class="fa-solid fa-user-gear"></i>
+<div class="max-w-2xl mx-auto px-4 pb-24">
+    <div class="bg-gradient-to-r from-indigo-900/60 to-blue-800/50 backdrop-blur-md text-white rounded-2xl p-6 shadow-2xl border border-white/5">
+        <div class="flex items-center gap-4">
+            <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-blue-400 to-cyan-400 flex items-center justify-center text-3xl shadow-lg text-white font-bold">
+                {% if client and client.first_name %}{{ client.first_name|slice:":1" }}{% else %}M{% endif %}
             </div>
-            <div>
-                <div class="font-bold text-xl drop-shadow-md">{% if client and client.first_name %}{{ client.first_name }} {{ client.last_name }}{% else %}Mening Profilim{% endif %}</div>
-                <div class="text-sm opacity-90 font-light">{% if client and client.phone %}<i class="fa-solid fa-phone mr-1"></i> {{ client.phone }}{% else %}Telefon raqam{% endif %}</div>
+            <div class="flex-1">
+                <div class="font-bold text-xl">{% if client and client.first_name %}{{ client.first_name }} {{ client.last_name }}{% else %}Mening Profilim{% endif %}</div>
+                <div class="text-sm opacity-80 mt-1">{% if client and client.phone %}<i class="fa-solid fa-phone mr-1"></i> {{ client.phone }}{% else %}Telefon raqam{% endif %}</div>
             </div>
+            <a href="/client_panel/dashboard/" class="text-sm text-slate-200 bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg">Ortga</a>
         </div>
     </div>
 
-    <div class="mt-6 bg-white/30 backdrop-blur-md p-6 rounded-xl shadow-xl border border-white/20">
-        <h2 class="text-lg font-semibold text-gray-800 mb-4">Ma'lumotlarni tahrirlash</h2>
+    <div class="mt-6 bg-white/5 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/6">
+        <h2 class="text-lg font-semibold text-white mb-4">Ma'lumotlarni tahrirlash</h2>
         <form id="profile-form">
             
             <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">
                 <i class="fa-solid fa-signature mr-1"></i> Ism
             </label>
-            <input name="first_name" id="first_name" value="{% if client %}{{ client.first_name }}{% endif %}" 
-                   class="w-full p-3 border border-gray-300/50 rounded-lg mb-3 bg-white/70 focus:outline-none focus:border-blue-500 transition duration-200 shadow-inner">
+                 <input name="first_name" id="first_name" value="{% if client %}{{ client.first_name }}{% endif %}" 
+                     class="w-full p-3 border border-white/10 rounded-lg mb-3 bg-transparent text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
             
             <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">
                 <i class="fa-solid fa-feather mr-1"></i> Familiya
             </label>
-            <input name="last_name" id="last_name" value="{% if client %}{{ client.last_name }}{% endif %}" 
-                   class="w-full p-3 border border-gray-300/50 rounded-lg mb-3 bg-white/70 focus:outline-none focus:border-blue-500 transition duration-200 shadow-inner">
+                 <input name="last_name" id="last_name" value="{% if client %}{{ client.last_name }}{% endif %}" 
+                     class="w-full p-3 border border-white/10 rounded-lg mb-3 bg-transparent text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
             
             <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
                 <i class="fa-solid fa-mobile-screen-button mr-1"></i> Telefon
             </label>
-            <input name="phone" id="phone" value="{% if client %}{{ client.phone }}{% endif %}" 
-                   class="w-full p-3 border border-gray-300/50 rounded-lg mb-3 bg-white/70 focus:outline-none focus:border-blue-500 transition duration-200 shadow-inner">
+                 <input name="phone" id="phone" value="{% if client %}{{ client.phone }}{% endif %}" 
+                     class="w-full p-3 border border-white/10 rounded-lg mb-3 bg-transparent text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
             
             <label for="region_name" class="block text-sm font-medium text-gray-700 mb-1">
                 <i class="fa-solid fa-map-pin mr-1"></i> Hudud (tanlang)
             </label>
                  <input list="regions_list" id="region_name" name="region_name" autocomplete="off" placeholder="Hududni tanlang yoki qidirish" 
                      value="{% if client and client.region %}{{ client.region.name }}{% endif %}"
-                     class="w-full p-3 border border-gray-300/50 rounded-lg mb-2 bg-white/70 focus:outline-none focus:border-blue-500 transition duration-200 shadow-inner">
+                     class="w-full p-3 border border-white/10 rounded-lg mb-2 bg-transparent text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
             <datalist id="regions_list">
                 {% for r in regions %}
                 <option value="{{ r }}"></option>
@@ -57,17 +58,17 @@
             
             <div id="new_region_wrap" style="display:none;" class="mb-3">
                 <label for="new_region" class="block text-sm font-medium text-gray-700 mb-1">Yangi hudud nomi</label>
-                <input id="new_region" name="new_region" autocomplete="off" class="w-full p-3 border border-gray-300/50 rounded-lg bg-white/70 focus:outline-none focus:border-blue-500 transition duration-200 shadow-inner" placeholder="Yangi hudud nomi">
+                <input id="new_region" name="new_region" autocomplete="off" class="w-full p-3 border border-white/10 rounded-lg bg-transparent text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" placeholder="Yangi hudud nomi">
             </div>
 
             <input type="hidden" name="address" id="address_hidden" value="{% if client and client.region %}{{ client.region.name }}{% endif %}">
             
-            <div class="flex space-x-3 mt-4">
-                <button type="button" id="send-loc" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg shadow-md transition duration-200 flex items-center justify-center space-x-2">
+            <div class="flex flex-col sm:flex-row gap-3 mt-4">
+                <button type="button" id="send-loc" class="w-full sm:flex-1 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg shadow-md transition duration-200 flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-location-crosshairs"></i>
                     <span>Joy yuborish</span>
                 </button>
-                <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg shadow-md transition duration-200 flex items-center justify-center space-x-2">
+                <button type="submit" class="w-full sm:flex-1 bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg shadow-md transition duration-200 flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-floppy-disk"></i>
                     <span>Saqlash</span>
                 </button>

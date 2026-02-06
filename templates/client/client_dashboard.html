@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
 
@@ -21,7 +22,7 @@
                     {{ T.my_dashboard|default:'Dashboard' }}
                 </h2>
             </div>
-            <button id="quick-order-btn" class="relative inline-flex items-center justify-center px-6 py-2 overflow-hidden font-medium text-white transition duration-300 ease-out border border-blue-500/30 rounded-full shadow-md group">
+            <button id="quick-order-btn" aria-label="Quick order" title="Buyurtma" role="button" class="relative inline-flex items-center justify-center px-6 py-2 overflow-hidden font-medium text-white transition duration-300 ease-out border border-blue-500/30 rounded-full shadow-md group">
                 <span class="absolute inset-0 flex items-center justify-center w-full h-full text-white duration-300 -translate-x-full bg-blue-600 group-hover:translate-x-0 ease">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 </span>
@@ -71,91 +72,20 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center space-x-6 overflow-x-auto pb-4 pt-2 no-scrollbar">
-                        <div class="flex-none text-center group cursor-pointer">
-                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-                                <span class="text-2xl filter drop-shadow-md">🍶</span>
-                            </div>
-                            <div class="text-[11px] mt-2 text-slate-300 font-medium tracking-wide uppercase">{{ T.category_mineral|default:'Mineral' }}</div>
-                        </div>
-                        <div class="flex-none text-center group cursor-pointer">
-                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(99,102,241,0.3)]">
-                                <span class="text-2xl filter drop-shadow-md">🧊</span>
-                            </div>
-                            <div class="text-[11px] mt-2 text-slate-300 font-medium tracking-wide uppercase">{{ T.category_chilled|default:'Muzdek' }}</div>
-                        </div>
-                        <div class="flex-none text-center group cursor-pointer">
-                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 border border-pink-500/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(236,72,153,0.3)]">
-                                <span class="text-2xl filter drop-shadow-md">🥤</span>
-                            </div>
-                            <div class="text-[11px] mt-2 text-slate-300 font-medium tracking-wide uppercase">{{ T.category_soft|default:'Ichimlik' }}</div>
-                        </div>
-                        <div class="flex-none text-center group cursor-pointer">
-                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-                                <span class="text-2xl filter drop-shadow-md">💧</span>
-                            </div>
-                            <div class="text-[11px] mt-2 text-slate-300 font-medium tracking-wide uppercase">{{ T.category_detox|default:'Detox' }}</div>
-                        </div>
-                    </div>
+                    <!-- categories removed per request to simplify UI -->
                 </div>
 
-                <div id="products" class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div class="group relative bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-3xl p-4 transition-all duration-300 hover:bg-slate-800/60 hover:border-white/20 hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]" data-name="Mineral water" data-price="5000" data-img="/static/img/water-bottle.png">
-                        <div class="absolute top-3 right-3 bg-blue-500/20 text-blue-300 text-[10px] px-2 py-0.5 rounded-full border border-blue-500/20">Best</div>
-                        <div class="h-32 mb-4 flex items-center justify-center relative">
+                <div id="products" class="flex justify-center">
+                    <div class="group relative card-hover bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 w-full max-w-sm transition-all duration-300 hover:bg-slate-800/60 hover:border-white/20 hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]" data-name="Mineral water" data-price="12000" data-img="{% static 'admin/img/suv.webp' %}">
+                        <div class="h-40 mb-4 flex items-center justify-center relative">
                             <div class="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
-                            <img src="/static/img/water-bottle.png" alt="Mineral" class="h-28 object-contain relative z-10 drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500" onerror="this.style.display='none'">
+                            <img src="{% static 'admin/img/suv.webp' %}" alt="Mineral" class="h-36 object-contain relative z-10 drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500" onerror="this.style.display='none'">
                         </div>
-                        <div class="space-y-1">
-                            <div class="font-bold text-slate-200">Mineral water</div>
-                            <div class="text-xs text-blue-400 font-mono">5 000 UZS</div>
+                        <div class="space-y-2">
+                            <div class="font-bold text-slate-200 text-lg">Mineral water</div>
+                            <div class="text-sm text-blue-400 font-mono">12 000 UZS</div>
                         </div>
-                        <button class="open-product w-full mt-4 bg-white/5 hover:bg-blue-600 border border-white/10 hover:border-blue-500 text-white text-sm py-2.5 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 group-hover:shadow-lg hover:shadow-blue-500/25">
-                            <span>Savatga</span>
-                            <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        </button>
-                    </div>
-
-                    <div class="group relative bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-3xl p-4 transition-all duration-300 hover:bg-slate-800/60 hover:border-white/20 hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]" data-name="Chilled water" data-price="7000" data-img="/static/img/chilled.png">
-                        <div class="h-32 mb-4 flex items-center justify-center relative">
-                             <div class="absolute inset-0 bg-indigo-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
-                            <img src="/static/img/chilled.png" alt="Chilled" class="h-28 object-contain relative z-10 drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500" onerror="this.style.display='none'">
-                        </div>
-                        <div class="space-y-1">
-                            <div class="font-bold text-slate-200">Chilled water</div>
-                            <div class="text-xs text-indigo-400 font-mono">7 000 UZS</div>
-                        </div>
-                        <button class="open-product w-full mt-4 bg-white/5 hover:bg-indigo-600 border border-white/10 hover:border-indigo-500 text-white text-sm py-2.5 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2">
-                            <span>Savatga</span>
-                            <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        </button>
-                    </div>
-
-                     <div class="group relative bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-3xl p-4 transition-all duration-300 hover:bg-slate-800/60 hover:border-white/20 hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]" data-name="Detox water" data-price="6500" data-img="/static/img/detox.png">
-                        <div class="h-32 mb-4 flex items-center justify-center relative">
-                             <div class="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
-                            <img src="/static/img/detox.png" alt="Detox" class="h-28 object-contain relative z-10 drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500" onerror="this.style.display='none'">
-                        </div>
-                        <div class="space-y-1">
-                            <div class="font-bold text-slate-200">Detox water</div>
-                            <div class="text-xs text-emerald-400 font-mono">6 500 UZS</div>
-                        </div>
-                        <button class="open-product w-full mt-4 bg-white/5 hover:bg-emerald-600 border border-white/10 hover:border-emerald-500 text-white text-sm py-2.5 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2">
-                            <span>Savatga</span>
-                             <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        </button>
-                    </div>
-
-                     <div class="group relative bg-slate-800/40 backdrop-blur-md border border-white/5 rounded-3xl p-4 transition-all duration-300 hover:bg-slate-800/60 hover:border-white/20 hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]" data-name="Soft drinks" data-price="8000" data-img="/static/img/soft.png">
-                        <div class="h-32 mb-4 flex items-center justify-center relative">
-                             <div class="absolute inset-0 bg-pink-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
-                            <img src="/static/img/soft.png" alt="Soft" class="h-28 object-contain relative z-10 drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500" onerror="this.style.display='none'">
-                        </div>
-                        <div class="space-y-1">
-                            <div class="font-bold text-slate-200">Soft drinks</div>
-                            <div class="text-xs text-pink-400 font-mono">8 000 UZS</div>
-                        </div>
-                        <button class="open-product w-full mt-4 bg-white/5 hover:bg-pink-600 border border-white/10 hover:border-pink-500 text-white text-sm py-2.5 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2">
+                        <button class="open-product w-full mt-6 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white text-sm py-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2">
                             <span>Savatga</span>
                             <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                         </button>
@@ -182,12 +112,7 @@
                             </div>
                             <div class="text-right">
                                 <div class="font-bold text-sm">{{ o.bottles }} ta</div>
-                                <div class="text-[10px] px-2 py-0.5 rounded-full inline-block mt-1 
-                                    {% if o.status == 'completed' %}bg-emerald-500/20 text-emerald-300
-                                    {% elif o.status == 'pending' %}bg-yellow-500/20 text-yellow-300
-                                    {% else %}bg-slate-700 text-slate-400{% endif %}">
-                                    {{ o.status }}
-                                </div>
+                                <span class="status-pill {% if o.status == 'completed' %}status-completed{% elif o.status == 'pending' %}status-pending{% else %}status-other{% endif %}">{{ o.status }}</span>
                             </div>
                         </div>
                         {% empty %}
@@ -256,6 +181,11 @@ const REGIONS = {{ regions_json|safe }};
     /* Hide scrollbar for categories but keep functionality */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    /* Product card tweaks for clearer layout */
+    #products .card-hover { min-height: 260px; }
+    #products .card-hover .font-bold { font-size: 1.05rem; }
+    #products .card-hover .text-xs { font-size: 0.85rem; }
+    #products img { max-height: 140px; }
 </style>
 
 <script>
