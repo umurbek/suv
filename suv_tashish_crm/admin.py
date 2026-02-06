@@ -47,6 +47,11 @@ class OrderAdmin(admin.ModelAdmin):
     search_fields = ('client__full_name', 'client__phone')
     raw_id_fields = ('client', 'courier')
 
+    @admin.display(description="Bottles")
+    def bottle_count(self, obj):
+        # Order modelida field nomi: bottles
+        return obj.bottles
+
 
 @admin.register(BottleHistory)
 class BottleHistoryAdmin(admin.ModelAdmin):

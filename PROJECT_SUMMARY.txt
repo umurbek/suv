@@ -1,0 +1,81 @@
+Project: suv_tashish_crm — Qisqacha loyiha xulosasi
+
+Sana: 2025-12-26
+
+1) Umumiy ma'lumot
+- Django asosida yozilgan CRM: mijozlar (client), kuryerlar (courier), admin panel.
+- Loyihaning frontend qismi web sahifa va Cordova mobil ilova (`cordova_app/www`) orqali taqdim etiladi.
+
+2) Backendda bajarilgan o'zgartirishlar (majburiylar)
+- `client_panel/views.py`: `api_create_order` endpoint JSON va form-encoded POSTlarni qabul qilish uchun yangilandi. Endpoints hozir mobil qurilmadan to'g'ridan-to'g'ri JSON yuborishga mos.
+- `client_panel/models.py`: `PushToken` modeli qo'shildi (FCM tokenlarni saqlash uchun).
+- `client_panel/admin.py`: `PushToken` registratsiyasi uchun admin interfeys qo'shildi.
+- `client_panel/api_views.py` va `api_urls.py`: `RegisterPushToken` API view qo'shildi va URL (`client_panel/api/register_push_token/`) expon qilindi.
+- `suv_tashish_crm/settings.py`: `FCM_SERVER_KEY` va `FCM_ENABLED` sozlamalari qo'shildi; CORS dev uchun `CORS_ALLOW_ALL_ORIGINS = True` mavjud (e'tibor: productionda o'zgartirish kerak).
+- `suv_tashish_crm/notifications.py`: FCM legacy API orqali push yuborish uchun util qo'shildi (`send_fcm`).
+- `client_panel/management/commands/send_test_push.py`: test push yuborish uchun management komanda qo'shildi.
+
+3) Cordova (mobil) qismi va o'zgartirishlar
+- Joylashgan papka: `cordova_app/`.
+- `config.xml`: ilova `content` manzili development uchun `http://192.168.241.174:8000/` ga yo'naltirildi (WebView sayt ko'rinishida ochilishi uchun). Dastlab pluginlar (camera, geolocation, file, permissions) deklaratsiyalangan; `cordova-plugin-firebasex` build vaqtida olib tashlandi (agar `google-services.json` bo'lsa yana qo'shish mumkin).
+- `www/index.html`: buyurtma shakli, kamera/geo/push tugmalari qo'shildi.
+- `www/js/config.js`: `API_BASE` HTTP API bazasi `http://192.168.241.174:8000/` ga qo'yildi.
+- `www/js/native.js`: kamera, geolocation va Firebase push (agar plugin o'rnatilgan bo'lsa) uchun JS kod yaratildi.
+
+4) APIlar (tezkor ro'yxat)
+- POST `/client_panel/api/create_order/` — order yaratish (JSON yoki form). Body misol: {"name":"Test","phone":"+998...","bottles":1,"note":"...","lat":41.3,"lon":69.2}
+  - Javob: {"status":"ok","order_id":123} yoki {"status":"error","message":"..."}
+- POST `/client_panel/api/register_push_token/` — FCM token saqlash. Body: {"token":"<fcm>","client_id":12,"platform":"android"}
+- JWT auth endpoints mavjud: `/client_panel/api/token/` va `/client_panel/api/token/refresh/` (rest_framework_simplejwt)
+- Admin/other views: `/client_panel/api/orders/` (DRF router orqali orderlar) va `/client_panel/api/register_push_token/`
+
+5) Build va arxivlar
+- AAB: `cordova_app/app-release.aab` (yaratildi)
+- Signed universal APK: `cordova_app/app-universal-signed.apk` (yaratildi, vaqtinchalik keystore bilan imzolangan)
+- ZIP paket (APK + AAB + README): `cordova_app/app-release-package.zip`
+- Vaqtinchalik keystore: `cordova_app/release-keystore.jks` (parol: `android`, alias: `release-key`) — e'tibor: bu faqat build uchun yaratilgan test keystore, production keystore bilan almashtiring.
+
+6) Firebase / Push haqida
+- Agar siz FCM ishlatmoqchi bo'lsangiz, Firebase project yarating va `google-services.json` faylni `cordova_app/` yoki `cordova_app/platforms/android/app/` ichiga joylang.
+- Server tomon: Firebase Console -> Project settings -> Cloud Messaging -> Server key (legacy) ni `FCM_SERVER_KEY` muhit o'zgaruvchisiga joylang.
+- Push yuborish util: `suv_tashish_crm/notifications.py` (legacy FCM HTTP API). Production uchun HTTP v1 API (service account) tavsiya qilinadi.
+
+7) Local testing va tez start
+- Django dev serverni ishga tushirish (LANda qurilmadan kirish uchun):
+  ```bash
+  cd /home/amirbek/Documents/crm_suv
+  python3 manage.py runserver 0.0.0.0:8000
+  ```
+- Cordova debug: qurilmada yoki emulator bilan test qilish uchun `cordova_app` ichida:
+  ```bash
+  cd cordova_app
+  npm install
+  npx cordova platform add android
+  npx cordova prepare android
+  npx cordova build android
+  ```
+- Agar `google-services.json` bo'lmasa va siz pushdan voz kechsangiz, `cordova-plugin-firebasex` pluginini `config.xml` dan olib tashlash mumkin (biz ilgari build jarayonida shuni qilganmiz).
+
+8) Xavfsizlik va production uchun eslatmalar
+- `DEBUG = False` qiling va `ALLOWED_HOSTS` ni sozlang.
+- `SECRET_KEY`, `FCM_SERVER_KEY`, va boshqa maxfiylarni muhit o'zgaruvchilar orqali taqdim eting.
+- CORS ni faqat kerakli domenlarga cheklang.
+
+9) Qolgan vazifalar / keyingi qadamlar
+- Admin sahifalaridan buyurtma tayinlash APIlarini (assign_order) va kuryer onboarding endpointlarini yanada kengaytirish.
+- Push uchun Firebase bilan to'liq integratsiya qilish (google-services.json va plugin sozlash).
+- Mobile ilovani prod keystore bilan imzolash va Play Console ga yuklash.
+- Postman kolleksiyasi va avtomatlashtirilgan testlar yaratish.
+
+10) Foydali fayllar joylashuvi
+- Django settings: `suv_tashish_crm/settings.py`
+- Cordova app: `cordova_app/` (index.html, www/js/config.js, www/js/native.js)
+- APK/AAB/zip: `cordova_app/app-universal-signed.apk`, `cordova_app/app-release.aab`, `cordova_app/app-release-package.zip`
+- Qo'llanma/README: `cordova_app/README_FIREBASE.md`, `API_README.md`
+
+Agar xohlasangiz, men hozir:
+- (A) API doc (Postman) yaratib beraman, yoki
+- (B) `assign_order` kabi admin APIlarini implementatsiya qilib qo'yaman, yoki
+- (C) Cordova ilovani yangilab, AAB/APK-ni siz xohlagan sozlamalar bilan qayta build qilib beraman.
+
+Tugadi.

@@ -12,6 +12,8 @@ import os
 import re
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
+from django.conf import settings
+
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -126,6 +128,59 @@ def admin_dashboard(request):
     except Exception:
         region_stats = []
 
+    # Pending orders count (orders awaiting delivery) and today's revenue
+    try:
+        pending_count = Order.objects.filter(status__in=['assigned', 'delivering']).count()
+    except Exception:
+        pending_count = 0
+
+    try:
+        today = timezone.localdate()
+    except Exception:
+        today = datetime.date.today()
+
+    try:
+        revenue_qs = Order.objects.filter(
+            Q(delivered_at__date=today) | (Q(status='done') & Q(created_at__date=today))
+        )
+        agg = revenue_qs.aggregate(total=Sum('payment_amount'))
+        today_total = agg.get('total') or 0
+        try:
+            # convert Decimal to int for display in UZS (fallback to 0)
+            today_revenue = int(today_total)
+        except Exception:
+            try:
+                today_revenue = int(float(today_total))
+            except Exception:
+                today_revenue = 0
+    except Exception:
+        today_revenue = 0
+
+    # Recent orders for the small table on dashboard
+    try:
+        recent_qs = Order.objects.select_related('client').order_by('-created_at')[:8]
+        recent_orders = []
+        for o in recent_qs:
+            amt = None
+            try:
+                amt = int(o.payment_amount) if getattr(o, 'payment_amount', None) is not None else None
+            except Exception:
+                amt = None
+            if amt is None:
+                try:
+                    amt = int(o.debt_change) if getattr(o, 'debt_change', None) is not None else 0
+                except Exception:
+                    amt = 0
+                recent_orders.append({
+                    'id': o.id,
+                    'client_name': o.client.full_name if o.client else None,
+                    'client': o.client.full_name if o.client else None,
+                    'status': o.status,
+                    'total_display': f"{amt:,}" if isinstance(amt, int) else str(amt),
+                })
+    except Exception:
+        recent_orders = []
+
     context = {
         'today_orders': today_orders,
         'active_couriers': active_couriers,
@@ -133,6 +188,9 @@ def admin_dashboard(request):
         'debtors': debtors,
         'top_debtors': top_debtors,
         'top_clients': top_clients,
+        'pending_count': pending_count,
+        'today_revenue': today_revenue,
+        'recent_orders': recent_orders,
         'top_couriers': top_couriers,
         'region_stats': region_stats,
         'weekly_labels_json': json.dumps(weekly_labels, ensure_ascii=False),
@@ -397,6 +455,20 @@ def clients_view(request):
         })
     return render(request, 'admin/clients.html', {'clients': clients})
 
+
+def clients_list(request):
+    q = (request.GET.get("q") or "").strip()
+
+    qs = Client.objects.select_related("region").order_by("-id")
+    if q:
+        qs = qs.filter(full_name__icontains=q) | qs.filter(phone__icontains=q)
+
+    return render(request, "admin/clients.html", {
+        "clients": qs[:500],
+        "q": q,
+    })
+
+
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model, update_session_auth_hash
@@ -506,59 +578,114 @@ def notifications_api(request):
 
 
 def orders_view(request):
-    # Auth guard temporarily disabled; re-enable when ready
-
     # pop any flash message set by other views (edit/delete)
     flash_message = request.session.pop('flash_message', None)
     flash_type = request.session.pop('flash_type', None)
+
     # Fetch recent orders with related client/courier/region
     orders_qs = Order.objects.select_related('client__region', 'courier').order_by('-created_at')[:50]
 
+    # include static regions parsed from CSV so templates can show static region info if needed
+    try:
+        static_regions = read_csv_data()
+    except Exception:
+        static_regions = []
+
+    # build a mapping from region name -> location (CSV 'location' column)
+    static_location_map = {r.get('name'): r.get('location') for r in static_regions}
+
     orders = []
     for o in orders_qs:
-        # determine address: prefer CSV location for the client's region if available
-        o_address = ''
-        if o.client and o.client.region:
-            # static_location_map may not be defined yet; try to read CSV and map
-            try:
-                static_regions_temp = read_csv_data()
-                static_map_temp = { r.get('name'): r.get('location') for r in static_regions_temp }
-                o_address = static_map_temp.get(o.client.region.name) or getattr(o.client.region, 'name', '')
-            except Exception:
-                o_address = getattr(o.client.region, 'name', '')
+        # ✅ SAFE client fields
+        client_obj = getattr(o, "client", None)
+        client_name = getattr(client_obj, "full_name", "") if client_obj else ""
+        client_phone = getattr(client_obj, "phone", "") if client_obj else ""
 
-        # map internal status to Uzbek label and CSS class
-        if o.status == 'done':
+        # ✅ SAFE address
+        o_address = ""
+        try:
+            if client_obj and getattr(client_obj, "region", None):
+                region_name = getattr(client_obj.region, "name", "")
+                o_address = static_location_map.get(region_name) or region_name
+        except Exception:
+            o_address = ""
+
+        # ✅ SAFE bottles count (Order model har xil bo‘lishi mumkin)
+        bottles = (
+            getattr(o, "bottle_count", None)
+            or getattr(o, "bottles", None)
+            or getattr(o, "bottles_count", None)
+            or getattr(o, "bottle", None)
+            or 0
+        )
+        try:
+            bottles = int(bottles)
+        except Exception:
+            bottles = 0
+
+        # ✅ status label/class
+        if getattr(o, "status", "") == 'done':
             s_label = 'Yetkazildi'
             s_class = 'text-green-600 bg-green-100'
-        elif o.status in ('delivering', 'assigned'):
+        elif getattr(o, "status", "") in ('delivering', 'assigned'):
             s_label = 'Jarayonda'
             s_class = 'text-yellow-600 bg-yellow-100'
         else:
             s_label = 'Berilmadi'
             s_class = 'text-red-600 bg-red-100'
 
+        # ✅ amounts (payment_amount bo‘lmasa debt_change)
+        amount = None
+        try:
+            if getattr(o, 'payment_amount', None) is not None:
+                amount = int(o.payment_amount)
+            elif getattr(o, 'debt_change', None) is not None:
+                amount = int(o.debt_change)
+        except Exception:
+            amount = None
+
+        # ✅ payment_type label
+        pt = getattr(o, "payment_type", None)
+        if pt == "cash":
+            payment_type_label = "Pul berdi (naqd)"
+        elif pt == "debt":
+            payment_type_label = "Qarz bo'ldi"
+        elif pt == "click":
+            payment_type_label = "Click/online"
+        else:
+            payment_type_label = ""
+
+        courier_obj = getattr(o, "courier", None)
+        courier_name = getattr(courier_obj, "full_name", None) if courier_obj else None
+
         orders.append({
             'order_id': o.id,
             'order_label': f"#{o.id}",
-            'client_id': o.client.id if o.client else None,
-            'user_id': f"u_{o.client.id}",
-            'client_name': o.client.full_name,
-            'phone': o.client.phone,
+            'client_id': client_obj.id if client_obj else None,
+            'user_id': f"u_{client_obj.id}" if client_obj else None,
+
+            'client_name': client_name,
+            'phone': client_phone,
             'address': o_address,
-            'lat': getattr(o.client, 'location_lat', None) if o.client else None,
-            'lon': getattr(o.client, 'location_lon', None) if o.client else None,
-            # prefer the comment attached to the order (client_note); fallback to client's profile note
-            'comment': (getattr(o, 'client_note', None) or (o.client.note if o.client else '')),
-            'status': o.status,
+
+            'lat': getattr(client_obj, 'location_lat', None) if client_obj else None,
+            'lon': getattr(client_obj, 'location_lon', None) if client_obj else None,
+
+            'comment': (getattr(o, 'client_note', None) or (getattr(client_obj, "note", "") if client_obj else "")),
+
+            'status': getattr(o, "status", ""),
             'status_label': s_label,
             'status_class': s_class,
-            'courier': o.courier.full_name if o.courier else None,
-            'bottles': o.bottle_count,
-            'amount': int(o.debt_change) if getattr(o, 'debt_change', None) is not None else None,
-            # payment info (stored on Order when courier confirms delivery)
-            'payment_type': (lambda pt: ('Pul berdi (naqd)' if pt=='cash' else ('Qarz bo\'ldi' if pt=='debt' else ('Click/online' if pt=='click' else ''))))(getattr(o, 'payment_type', None)),
-            'payment_amount': int(o.payment_amount) if getattr(o, 'payment_amount', None) is not None else None,
+
+            'courier': courier_name,
+
+            # ✅ muhim joy: endi xato bermaydi
+            'bottles': bottles,
+
+            'amount': amount,
+
+            'payment_type': payment_type_label,
+            'payment_amount': int(getattr(o, 'payment_amount', 0) or 0) if getattr(o, 'payment_amount', None) is not None else None,
         })
 
     # Top clients by number of orders
@@ -583,26 +710,19 @@ def orders_view(request):
         .order_by('-total_orders')
     )
 
-    # include static regions parsed from CSV so templates can show static region info if needed
-    static_regions = read_csv_data()
-
-    # build a mapping from region name -> location (CSV 'location' column)
-    static_location_map = { r.get('name'): r.get('location') for r in static_regions }
-
     # Also provide all client profiles so the Orders page can show "all profiles"
     clients_qs = Client.objects.select_related('region').all()
 
     profiles = []
     for c in clients_qs:
-        # prefer CSV location for region if available, otherwise use Region.name
         address = ''
         if c.region:
             address = static_location_map.get(c.region.name) or getattr(c.region, 'name', '')
 
-        # determine last order status for this client
+        # last order status
         last_order = Order.objects.filter(client=c).order_by('-created_at').first()
         if last_order:
-            st = last_order.status
+            st = getattr(last_order, "status", "")
             if st == 'done':
                 p_label = 'Yetkazildi'
                 p_class = 'text-green-600 bg-green-100'
@@ -893,18 +1013,21 @@ def edit_courier(request, courier_id):
 
     return render(request, 'admin/add_edit_courier_clean.html', {'region_choices': region_choices, 'courier': courier, 'action': 'edit'})
 
+from django.shortcuts import redirect, get_object_or_404
 
 def delete_courier(request, courier_id):
-    if request.method == 'POST':
+    if request.method == "POST":
         try:
             courier = Courier.objects.get(pk=courier_id)
             courier.delete()
-            request.session['flash_message'] = 'Kuryer o\'chirildi.'
-            request.session['flash_type'] = 'danger'
+            request.session["flash_message"] = "Kuryer o‘chirildi."
+            request.session["flash_type"] = "danger"
         except Courier.DoesNotExist:
-            request.session['flash_message'] = 'Kuryer topilmadi.'
-            request.session['flash_type'] = 'danger'
-    return redirect('couriers_view')
+            request.session["flash_message"] = "Kuryer topilmadi."
+            request.session["flash_type"] = "danger"
+
+    # 🔥 MUHIM JOY — namespace bilan redirect
+    return redirect("admin_panel:couriers_view")
 
 
 def reports_view(request):
@@ -1045,10 +1168,35 @@ def debtors_view(request):
     from django.utils import timezone
 
     title = 'Qarzdorlar'
-    # Exclude obvious test/sample names (e.g. names starting with 'Mijoz')
-    # so the debtors page doesn't show statically-added sample records.
-    clients_qs = Client.objects.filter(debt__gt=0).exclude(full_name__startswith='Mijoz').select_related('region')
+    # Optional filters from query params
+    filter_name = (request.GET.get('name') or '').strip()
+    filter_phone = (request.GET.get('phone') or '').strip()
+    filter_region = (request.GET.get('region') or '').strip()
+
+    # Base queryset: all clients with non-zero debt (positive or negative)
+    from django.db.models import Q as _Q
+    clients_qs = Client.objects.exclude(debt=0).select_related('region')
     debtors = []
+    # Apply filters if provided (robust fallbacks)
+    try:
+        if filter_name:
+            clients_qs = clients_qs.filter(
+                Q(full_name__icontains=filter_name) | Q(first_name__icontains=filter_name) | Q(last_name__icontains=filter_name)
+            )
+        if filter_phone:
+            digits = ''.join(ch for ch in filter_phone if ch.isdigit())
+            if digits:
+                clients_qs = clients_qs.filter(Q(phone__icontains=filter_phone) | Q(phone__icontains=digits))
+            else:
+                clients_qs = clients_qs.filter(phone__icontains=filter_phone)
+        if filter_region:
+            try:
+                rid = int(filter_region)
+                clients_qs = clients_qs.filter(region__id=rid)
+            except Exception:
+                clients_qs = clients_qs.filter(Q(region__name__icontains=filter_region))
+    except Exception:
+        clients_qs = Client.objects.filter(debt__gt=0).select_related('region')
     now = timezone.now()
     # load static CSV mapping (phone -> csv name) to prefer CSV name when available
     try:
@@ -1107,7 +1255,37 @@ def debtors_view(request):
             {'name': 'Dilorom Kurye', 'phone': '+998903334455'},
         ]
 
+    def _is_static_client_phone(raw_phone: str) -> bool:
+        """Return True if phone looks like a synthetic/static phone created by seeding.
+
+        Heuristics:
+        - phone strings generated by seeding start with 'r' or contain underscores
+        - phone must contain at least 9 digits to be considered valid (local number)
+        Note: If phone is empty/null we consider it *not* static so admins can see
+        debtors without phone values.
+        """
+        if not raw_phone:
+            return False
+        try:
+            if isinstance(raw_phone, str) and raw_phone.startswith('r'):
+                return True
+        except Exception:
+            pass
+        if '_' in str(raw_phone):
+            return True
+        digits = ''.join(ch for ch in (raw_phone or '') if ch.isdigit())
+        if len(digits) < 9:
+            return True
+        return False
+
     for c in clients_qs:
+        # skip synthetic/static seeded clients so admin shows only real clients
+        try:
+            if _is_static_client_phone(c.phone):
+                continue
+        except Exception:
+            # on unexpected error, skip this client to avoid showing bad data
+            continue
         last_order = Order.objects.filter(client=c).order_by('-created_at').first()
         order_id = last_order.id if last_order else None
         # Determine courier info: prefer order.courier if present, otherwise pick a static courier
@@ -1202,7 +1380,23 @@ def debtors_view(request):
     # Pop any flash message set by previous actions (e.g., mark_debtor_paid)
     flash_message = request.session.pop('flash_message', None)
     flash_type = request.session.pop('flash_type', None)
-    return render(request, 'admin/debtors.html', {'debtors': debtors, 'title': title, 'flash_message': flash_message, 'flash_type': flash_type})
+
+    # Regions list for the filter select (include DB regions)
+    try:
+        regions_list = list(Region.objects.order_by('name'))
+    except Exception:
+        regions_list = []
+
+    return render(request, 'admin/debtors.html', {
+        'debtors': debtors,
+        'title': title,
+        'flash_message': flash_message,
+        'flash_type': flash_type,
+        'regions': regions_list,
+        'filter_name': filter_name,
+        'filter_phone': filter_phone,
+        'filter_region': filter_region,
+    })
 
 
 def mark_debtor_paid(request, client_id):
@@ -1216,7 +1410,7 @@ def mark_debtor_paid(request, client_id):
         except Client.DoesNotExist:
             request.session['flash_message'] = 'Mijoz topilmadi.'
             request.session['flash_type'] = 'danger'
-    return redirect('debtors_view')
+    return redirect('admin_panel:debtors_view')
 
 
 def inactive_clients_view(request):
@@ -1279,3 +1473,423 @@ def delete_order(request, order_id):
         return JsonResponse({'status': 'error', 'message': 'Buyurtma topilmadi'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+from django.contrib import messages
+from common.csv_utils import append_client_to_csv
+
+
+def add_client(request):
+    if request.method == "POST":
+        full_name = request.POST.get("full_name", "").strip()
+        phone = request.POST.get("phone", "").strip()
+        address = request.POST.get("address", "").strip()
+
+        # minimal validatsiya
+        if not full_name or not phone or not address:
+            messages.error(request, "Iltimos, barcha maydonlarni to‘ldiring.")
+            return render(request, "add_client.html")
+
+        csv_path = append_client_to_csv(full_name, phone, address, source="admin")
+
+
+        messages.success(request, f"✅ Mijoz saqlandi. CSV: {csv_path}")
+
+        return redirect("admin_panel:admin_dashboard")
+
+    return render(request, "admin_panel/add_client.html")
+import os
+import csv
+from datetime import datetime
+from django.http import HttpResponse
+from django.conf import settings
+
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment
+from openpyxl.utils import get_column_letter
+
+
+def admin_clients_export_excel(request):
+    """
+    Volidam.csv fayldan ma'lumotlarni olib .xlsx qilib export qiladi
+    """
+    # ✅ CSV fayl yo'li (Volidam.csv project rootda bo'lsa)
+    csv_path = os.path.join(settings.BASE_DIR, "Volidam.csv")
+
+    if not os.path.exists(csv_path):
+        return HttpResponse(f"CSV topilmadi: {csv_path}", status=404)
+
+    # ✅ CSV o'qish (utf-8-sig: Excel/Windowsdan chiqqan CSVlarda yaxshi ishlaydi)
+    with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+
+    # ✅ Excel yaratish
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Clients"
+
+    # Headerlar (CSVdagi headerlar qanday bo'lsa, shuni olamiz)
+    headers = reader.fieldnames or []
+    if not headers:
+        return HttpResponse("CSV header topilmadi (1-qator bo'sh bo'lishi mumkin).", status=400)
+
+    # Header yozish
+    ws.append(headers)
+    for col, h in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col)
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Data yozish
+    for r in rows:
+        ws.append([r.get(h, "") for h in headers])
+
+    # ✅ Column width auto
+    for col_idx, h in enumerate(headers, start=1):
+        max_len = len(str(h))
+        for row_idx in range(2, ws.max_row + 1):
+            val = ws.cell(row=row_idx, column=col_idx).value
+            if val is None:
+                continue
+            max_len = max(max_len, len(str(val)))
+        ws.column_dimensions[get_column_letter(col_idx)].width = min(max_len + 2, 45)
+
+    # ✅ Response (download)
+    filename = f"clients_export_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    wb.save(response)
+    return response
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.contrib import messages
+
+from suv_tashish_crm.models import Client, Region
+
+# senlarda bor funksiya (CSV o‘qiydi) - shuni ishlatamiz
+# from .utils import read_csv_data  # agar boshqa faylda bo‘lsa
+# yoki shu faylda oldin mavjud bo‘lsa, import qilma
+
+def clients_list(request):
+    q = (request.GET.get("q") or "").strip()
+
+    qs = Client.objects.select_related("region").order_by("-id")
+    if q:
+        qs = qs.filter(full_name__icontains=q) | qs.filter(phone__icontains=q)
+
+    return render(request, "admin/clients.html", {
+        "clients": qs[:500],
+        "q": q,
+    })
+
+
+@require_http_methods(["POST"])
+def clients_import_csv(request):
+    """
+    CSV'dagi mijozlarni DB'ga bir marta import qiladi.
+    Telefon bo‘yicha duplicate bo‘lsa update qilmaydi (xohlasang update ham qilamiz).
+    """
+    try:
+        rows = read_csv_data()  # ✅ sening mavjud funksiyang
+    except Exception as e:
+        messages.error(request, f"CSV o‘qishda xato: {e}")
+        return redirect("admin_panel:clients_list")
+
+    created = 0
+    skipped = 0
+
+    for r in rows:
+        name = (r.get("full_name") or r.get("name") or "").strip()
+        phone = (r.get("phone") or "").strip()
+        region_name = (r.get("region") or r.get("region_name") or "").strip()
+
+        if not phone:
+            skipped += 1
+            continue
+
+        region_obj = None
+        if region_name:
+            region_obj = Region.objects.filter(name__iexact=region_name).first()
+
+        obj, was_created = Client.objects.get_or_create(
+            phone=phone,
+            defaults={
+                "full_name": name,
+                "region": region_obj,
+            }
+        )
+
+        if was_created:
+            created += 1
+        else:
+            # bor bo‘lsa ham bo‘sh fields ni to‘ldirib qo‘yamiz (ixtiyoriy)
+            updated = False
+            if name and not obj.full_name:
+                obj.full_name = name
+                updated = True
+            if region_obj and not obj.region:
+                obj.region = region_obj
+                updated = True
+            if updated:
+                obj.save()
+            skipped += 1
+
+    messages.success(request, f"CSV import: {created} ta qo‘shildi, {skipped} ta o‘tkazildi.")
+    return redirect("admin_panel:clients_list")
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from suv_tashish_crm.models import Client, Region
+import os
+from openpyxl import load_workbook
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+from openpyxl import load_workbook
+import os
+
+def read_couriers_xlsx_locations():
+    # ✅ couriers.xlsx joyi:
+    xlsx_path = os.path.join(settings.BASE_DIR, "couriers.xlsx")
+    # agar "data" papkada bo‘lsa buni ishlat:
+    # xlsx_path = os.path.join(settings.BASE_DIR, "data", "couriers.xlsx")
+
+    print("XLSX PATH:", xlsx_path)  # ✅ debug
+    if not os.path.exists(xlsx_path):
+        print("❌ couriers.xlsx topilmadi!")
+        return []
+
+    wb = load_workbook(xlsx_path, data_only=True)
+    ws = wb.active
+
+    # headerlar
+    headers = []
+    for cell in ws[1]:
+        headers.append((str(cell.value).strip().lower() if cell.value else ""))
+
+    print("HEADERS:", headers)  # ✅ debug
+
+    candidates = ["hudud", "manzil", "location", "region", "address"]
+    col_idx = None
+    for i, h in enumerate(headers):
+        if any(k in h for k in candidates):
+            col_idx = i + 1
+            break
+
+    # agar header topilmasa -> 1-ustun deb olamiz
+    if col_idx is None:
+        col_idx = 1
+
+    seen = set()
+    locations = []
+    for r in range(2, ws.max_row + 1):
+        val = ws.cell(row=r, column=col_idx).value
+        loc = (str(val).strip() if val is not None else "")
+        if loc and loc not in seen:
+            seen.add(loc)
+            locations.append(loc)
+
+    print("LOC COUNT:", len(locations))  # ✅ debug
+    return locations
+
+def edit_client(request, client_id):
+    client = get_object_or_404(Client.objects.select_related("region"), pk=client_id)
+
+    if request.method == "POST":
+        full_name = (request.POST.get("full_name") or "").strip()
+        phone = (request.POST.get("phone") or "").strip()
+        region_id = (request.POST.get("region_id") or request.POST.get("region") or "").strip()
+        note = (request.POST.get("note") or "").strip()
+
+        if phone and Client.objects.exclude(pk=client.pk).filter(phone=phone).exists():
+            messages.error(request, "Bu telefon raqam boshqa mijozda bor.")
+            return redirect("admin_panel:edit_client", client_id=client.pk)
+
+        client.full_name = full_name
+        client.phone = phone
+
+        # ✅ Hudud saqlash (DB id yoki couriers.xlsx)
+        if region_id.startswith("xlsx:"):
+            loc_name = region_id.replace("xlsx:", "", 1).strip()
+            if loc_name:
+                region_obj, _ = Region.objects.get_or_create(name=loc_name)
+                client.region = region_obj
+            else:
+                client.region = None
+        elif region_id:
+            # db id bo‘lsa
+            try:
+                client.region = Region.objects.filter(id=int(region_id)).first()
+            except Exception:
+                client.region = None
+        else:
+            client.region = None
+
+        if hasattr(client, "note"):
+            client.note = note
+
+        client.save()
+        messages.success(request, "Mijoz yangilandi.")
+        return redirect("admin_panel:clients_list")
+
+    # ✅ GET: select uchun list tayyorlaymiz
+    db_regions = list(Region.objects.order_by("name"))
+    xlsx_locations = []
+    try:
+        xlsx_locations = read_couriers_xlsx_locations()
+    except Exception:
+        xlsx_locations = []
+
+    regions_with_location = []
+    # 1) DB
+    for r in db_regions:
+        regions_with_location.append((str(r.id), r.name))
+    # 2) XLSX
+    for loc in xlsx_locations:
+        regions_with_location.append((f"xlsx:{loc}", loc))
+
+    return render(request, "admin/edit_client.html", {
+        "client": client,
+        "regions_with_location": regions_with_location,
+    })
+
+
+@require_http_methods(["POST"])
+def delete_client(request, client_id):
+    c = get_object_or_404(Client, pk=client_id)
+    c.delete()
+    messages.success(request, "Mijoz o‘chirildi.")
+    return redirect("admin_panel:clients_list") 
+
+
+
+import re
+from openpyxl import load_workbook
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.views.decorators.http import require_POST
+from django.db import transaction
+
+from suv_tashish_crm.models import Client
+
+
+def _norm_phone(phone) -> str:
+    if not phone:
+        return ""
+    s = str(phone).strip()
+    s = s.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    s = s.replace(".0", "")
+    digits = re.sub(r"\D", "", s)
+
+    if digits.startswith("998") and len(digits) >= 12:
+        return "+" + digits[:12]
+    if len(digits) == 9:
+        return "+998" + digits
+    if s.startswith("+") and len(digits) >= 12:
+        return "+" + digits[:12]
+    return ""
+
+
+def _is_admin(request) -> bool:
+    return bool(request.session.get("admin_id"))
+
+
+@require_POST
+def admin_clients_upload_excel(request):
+    if not _is_admin(request):
+        messages.error(request, "Ruxsat yo‘q. Faqat admin yuklay oladi.")
+        return redirect("admin_panel:clients_list")
+
+    f = request.FILES.get("excel_file")
+    if not f:
+        messages.error(request, "Excel fayl tanlanmadi.")
+        return redirect("admin_panel:clients_list")
+
+    if not f.name.lower().endswith(".xlsx"):
+        messages.error(request, "Faqat .xlsx format qabul qilinadi.")
+        return redirect("admin_panel:clients_list")
+
+    try:
+        wb = load_workbook(filename=f, data_only=True)
+        ws = wb.active
+    except Exception:
+        messages.error(request, "Excel faylni o‘qib bo‘lmadi. Fayl buzilgan bo‘lishi mumkin.")
+        return redirect("admin_panel:clients_list")
+
+    # ✅ HEADER: full_name | bottle_soni | manzili | phone
+    expected = ["full_name", "bottle_count", "address", "phone"]
+    header = []
+    for i in range(1, 5):
+        v = ws.cell(row=1, column=i).value
+        header.append(str(v).strip().lower() if v else "")
+
+    if header != expected:
+        messages.error(request, f"Header noto‘g‘ri. Kerakli: {expected}")
+        return redirect("admin_panel:clients_list")
+
+    created = 0
+    skipped = 0
+    errors = []
+
+    with transaction.atomic():
+        for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            full_name, bottle_soni, manzili, phone = (list(row[:4]) + [None, None, None, None])[:4]
+
+            name = (str(full_name).strip() if full_name else "")
+            phone_norm = _norm_phone(phone)
+            address = (str(manzili).strip() if manzili else "")
+
+            try:
+                bottle = int(bottle_soni) if bottle_soni not in (None, "") else 0
+            except:
+                bottle = 0
+
+            if not name or not phone_norm:
+                skipped += 1
+                continue
+
+            if Client.objects.filter(phone=phone_norm).exists():
+                skipped += 1
+                continue
+
+            try:
+                client = Client(full_name=name, phone=phone_norm)
+
+                # ✅ manzil (qaysi field bo‘lsa shunga yozadi)
+                if hasattr(client, "address"):
+                    client.address = address
+                elif hasattr(client, "manzil"):
+                    client.manzil = address
+                elif hasattr(client, "manzili"):
+                    client.manzili = address
+
+                # ✅ bottle (qaysi field bo‘lsa shunga yozadi)
+                if hasattr(client, "bottle_balance"):
+                    client.bottle_balance = bottle
+                elif hasattr(client, "bottle_soni"):
+                    client.bottle_soni = bottle
+
+                # ✅ source
+                if hasattr(client, "source"):
+                    client.source = "admin"
+
+                client.save()
+
+
+                created += 1
+
+            except Exception as e:
+                errors.append(f"{row_idx}-qator: {e}")
+
+    if errors:
+        messages.warning(request, f"Yuklandi: {created}, o‘tkazib yuborildi: {skipped}. Xatolar: {len(errors)} ta.")
+    else:
+        messages.success(request, f"Yuklandi: {created} ta. O‘tkazib yuborildi: {skipped} ta.")
+
+    return redirect("admin_panel:clients_list")

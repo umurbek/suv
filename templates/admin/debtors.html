@@ -1,10 +1,11 @@
 {% extends 'base.html' %}
 
+
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
 <div class="p-6">
-    <h2 class="text-2xl font-semibold mb-4">{{ title }}</h2>
+    <h2 class="text-2xl font-semibold mb-4 text-white">{{ title }}</h2>
     {% if flash_message %}
     <div id="flash" class="mb-4 p-3 rounded {% if flash_type == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">{{ flash_message }}</div>
     <script>
@@ -15,35 +16,50 @@
     </script>
     {% endif %}
 
+    <form method="get" class="mb-6 flex flex-wrap gap-3 items-center">
+        <input name="name" placeholder="Ism" value="{{ filter_name }}" class="px-4 py-2 rounded border bg-gray-800 text-white placeholder-gray-400" />
+        <input name="phone" placeholder="Telefon" value="{{ filter_phone }}" class="px-4 py-2 rounded border bg-gray-800 text-white placeholder-gray-400" />
+        <select name="region" class="px-4 py-2 rounded border bg-gray-800 text-white">
+            <option value="">Barchasi</option>
+            {% for r in regions %}
+            <option value="{{ r.id }}" {% if filter_region == r.id|stringformat:"s" %}selected{% endif %}>{{ r.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Filtrlash</button>
+        <a href="{% url 'admin_panel:debtors_view' %}" class="ml-2 text-sm text-gray-300">Tozalash</a>
+
+    </form>
+
     {% if debtors %}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for d in debtors %}
-        <div class="bg-white p-4 rounded shadow">
+        <div class="bg-gray-900 border border-gray-800 p-5 rounded-lg shadow-lg text-gray-200">
             <div class="flex items-start justify-between">
-                <div>
-                    <div class="text-sm text-gray-500">Buyurtma: {% if d.order_id %}#{{ d.order_id }}{% else %}-{% endif %}</div>
-                    <div class="text-lg font-medium">{{ d.name }} <span class="text-xs text-gray-400">({{ d.user_id }})</span></div>
-                    <div class="text-sm text-gray-600">Telefon: {{ d.phone }}</div>
-                    <div class="text-sm text-gray-600">Manzil: {{ d.address }}</div>
-                    <div class="text-sm text-gray-600">Kuryer: {{ d.courier }}{% if d.courier_phone %} ({{ d.courier_phone }}){% endif %}</div>
-                    <div class="text-sm text-gray-500">Oxirgi buyurtma: {% if d.last_order_date %}{{ d.last_order_date }}{% else %}-{% endif %}</div>
+                <div class="min-w-0">
+                    <div class="text-sm text-gray-400">Buyurtma: {% if d.order_id %}<a href="/admin_panel/orders/{{ d.order_id }}/" class="text-indigo-400 hover:underline">#{{ d.order_id }}</a>{% else %}-{% endif %}</div>
+                    <div class="text-lg font-semibold truncate">{{ d.name }} <span class="text-xs text-gray-500">({{ d.user_id }})</span></div>
+                    <div class="text-sm text-gray-400 mt-1">Telefon: <a href="tel:{{ d.phone }}" class="text-gray-200 hover:text-indigo-300">{{ d.phone }}</a></div>
+                    <div class="text-sm text-gray-400">Manzil: <span class="text-gray-300">{{ d.address }}</span></div>
+                    <div class="text-sm text-gray-400">Kuryer: <span class="text-gray-300">{{ d.courier }}{% if d.courier_phone %} ({{ d.courier_phone }}){% endif %}</span></div>
+                    <div class="text-sm text-gray-500 mt-2">Oxirgi buyurtma: {% if d.last_order_date %}{{ d.last_order_date }}{% else %}-{% endif %}</div>
                 </div>
-                <div class="text-right">
-                    <div class="text-sm text-gray-500 mb-2">{{ d.days_overdue }} kun</div>
-                    <div class="text-lg text-red-600 font-semibold">{{ d.debt }}</div>
+                <div class="text-right ml-4 flex-shrink-0">
+                    <div class="text-sm text-gray-400 mb-2">{{ d.days_overdue }} kun</div>
+                    <div class="text-2xl text-red-400 font-bold">{{ d.debt|floatformat:2 }}</div>
                 </div>
             </div>
-            <div class="mt-4 flex items-center justify-end">
+            <div class="mt-4 flex items-center justify-end gap-3">
                 <form method="post" action="/admin_panel/debtors/{{ d.client_id }}/paid/">
                     {% csrf_token %}
-                    <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded">To'landi</button>
+                    <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">To'landi</button>
                 </form>
+                <a href="/admin_panel/clients/{{ d.client_id }}/edit/" class="text-sm text-indigo-400">Tahrirlash</a>
             </div>
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <div class="text-gray-600">Hozircha qarzdorlar yo'q.</div>
+    <div class="text-gray-400">Hozircha qarzdorlar yo'q.</div>
     {% endif %}
 </div>
 {% endblock %}

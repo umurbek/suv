@@ -99,7 +99,10 @@
 
                     <div class="flex gap-2">
                         {% if o.client_id %}
-                        <a href="{% url 'edit_client' client_id=o.client_id %}" class="flex-1 text-center py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-all border border-white/5">
+                        <a href="{% url 'admin_panel:edit_client' client_id=o.client_id %}" class="flex-1 text-center py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-all border border-white/5">
+                                {{ T.edit_client|default:'Mijozni tahrirlash' }}
+                        </a>
+
                             {{ T.edit_client|default:'Mijozni tahrirlash' }}
                         </a>
                         {% endif %}

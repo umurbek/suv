@@ -24,6 +24,9 @@
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
     </style>
     {% block extra_head %}{% endblock %}
+    {% if GOOGLE_MAPS_API_KEY %}
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places"></script>
+    {% endif %}
 </head>
 <body class="bg-[#020617] text-slate-300">
 
@@ -74,6 +77,8 @@
                 {% include "partials/nav_item.html" with link="/courier_panel/new_orders/" icon="fa-bell" text=T.new_orders|default:'Yangi buyurtmalar' badge="newOrdersBadge" %}
                 {% include "partials/nav_item.html" with link="/courier_panel/history/" icon="fa-clock-rotate-left" text=T.history|default:'Tarix' %}
                 {% include "partials/nav_item.html" with link="/courier_panel/profile/" icon="fa-user-gear" text="Profil" %}
+                {% include "partials/nav_item.html" with link="/courier_panel/clients/add/" icon="fa-user-plus" text="Mijoz qo‘shish" %}
+
             
             {% elif request.session.client_id and '/client_panel/' in request.path %}
                 <p class="px-4 text-[10px] font-bold text-slate-600 uppercase mb-2">Mijoz menyusi</p>
@@ -89,11 +94,18 @@
                 <a href="/admin_panel/profile/" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 {% if '/admin_panel/profile/' in request.path %}nav-link-active{% endif %}">
                     <i class="fa-solid fa-user-gear w-5"></i> <span class="text-sm font-semibold">Profil</span>
                 </a>
-
-
                 <a href="/admin_panel/orders/" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 {% if '/admin_panel/orders/' in request.path %}nav-link-active{% endif %}">
                     <i class="fa-solid fa-cart-shopping w-5"></i> <span class="text-sm font-semibold">Buyurtmalar</span>
                 </a>
+                <a href="/admin_panel/clients/" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 {% if '/admin/clients/' in request.path and 'add' not in request.path %}nav-link-active{% endif %}"> <i class="fa-solid fa-users w-5"></i> 
+                    <span class="text-sm font-semibold">Mijozlar</span>
+                 </a>
+                <a href="/admin_panel/clients/add/"class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 {% if 'clients/add' in request.path %}nav-link-active{% endif %}">
+                    <i class="fa-solid fa-user-plus w-5"></i>
+                    <span class="text-sm font-semibold">Mijoz qo‘shish</span>
+                </a>
+
+                
                 <a href="/admin_panel/couriers/" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 {% if '/admin_panel/couriers/' in request.path %}nav-link-active{% endif %}">
                     <i class="fa-solid fa-truck-ramp-box w-5"></i> <span class="text-sm font-semibold">Kuryerlar</span>
                 </a>
@@ -108,10 +120,9 @@
                 </div>
             {% endif %}
         </nav>
-
+        
         <div class="p-4 border-t border-white/5 bg-black/20">
-            <form method="POST" action="/set_language/" class="mb-4">
-                {% csrf_token %}
+            <form method="GET" action="/set_language/" class="mb-4">
                 <select name="lang" onchange="this.form.submit()" class="w-full bg-slate-800 border-none text-xs rounded-xl p-2.5 text-white focus:ring-blue-500">
                     {% for code,label in LANG_OPTIONS %}
                     <option value="{{ code }}" {% if current_lang == code %}selected{% endif %}>{{ label }}</option>
@@ -142,6 +153,11 @@
         </header>
 
         <div class="p-4 md:p-8">
+            {% if admin_login_error and '/admin_panel/' in request.path %}
+            <div class="mb-4 p-4 rounded bg-red-50 border-l-4 border-red-500 text-red-700">
+                {{ admin_login_error }}
+            </div>
+            {% endif %}
             {% block content %}{% endblock %}
         </div>
 
@@ -161,12 +177,17 @@
             <a href="/admin_panel/orders/" class="p-3 rounded-2xl {% if '/orders/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
                 <i class="fa-solid fa-boxes-stacked text-xl"></i>
             </a>
+            <a href="/admin_panel/clients/" class="p-3 rounded-2xl {% if '/clients/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
+                <i class="fa-solid fa-users text-xl"></i>
+            </a>
             <a href="/admin_panel/couriers/" class="p-3 rounded-2xl {% if '/couriers/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
                 <i class="fa-solid fa-truck-fast text-xl"></i>
             </a>
             <a href="/admin_panel/reports/" class="p-3 rounded-2xl {% if '/reports/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
                 <i class="fa-solid fa-chart-line text-xl"></i>
             </a>
+         
+
         {% elif '/client_panel/' in request.path %}
             <a href="/client_panel/dashboard/" class="p-3 rounded-2xl {% if '/dashboard/' in request.path %}text-blue-500 bg-blue-500/10{% else %}text-slate-400{% endif %}">
                 <i class="fa-solid fa-house text-xl"></i>

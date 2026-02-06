@@ -7,6 +7,7 @@ from suv_tashish_crm.models import Courier, Order, Client
 import json
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+from .utils import append_client_to_csv
 
 
 # Simple in-memory store for courier positions (development only)
@@ -154,7 +155,7 @@ def api_today_orders(request):
             'lat': getattr(client, 'location_lat', None),
             'lon': getattr(client, 'location_lon', None),
             'status': o.status,
-                'bottles': o.bottle_count,
+                'bottles': o.client.bottles_count,
                 'debt_change': float(o.debt_change or 0.0),
                 'payment_type': getattr(o, 'payment_type', None),
                 'payment_amount': float(o.payment_amount) if getattr(o, 'payment_amount', None) is not None else None,
@@ -270,8 +271,13 @@ def api_new_orders(request):
             'phone': client.phone if client else None,
             'lat': getattr(client, 'location_lat', None),
             'lon': getattr(client, 'location_lon', None),
-            'bottle_count': o.bottle_count,
-            'note': o.client_note or '',
+            'bottle_count': getattr(o, "bottles_count", None)
+            if getattr(o, "bottles_count", None) is not None
+            else (getattr(o.client, "bottles_count", 0) if hasattr(o, "client") and o.client_id else 0),
+            'note': getattr(o, "client_note", None)
+            or (getattr(o.client, "note", "") if hasattr(o, "client") and o.client_id else "")
+            or (getattr(o.client, "client_note", "") if hasattr(o, "client") and o.client_id else "")
+            or "",
         })
     return JsonResponse({'status': 'ok', 'data': items})
 
@@ -391,45 +397,50 @@ def api_create_order_by_courier(request):
 
 @csrf_exempt
 def api_accept_order(request):
-    """Assign a pending order to the current courier (dev). POST JSON {order_id} """
+    """Assign a pending order to the current courier (session). POST JSON {order_id}"""
     if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'POST required'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'POST required'}, status=405)
+
+    # 1) payload
     try:
         payload = json.loads(request.body.decode('utf-8'))
         order_id = int(payload.get('order_id'))
     except Exception:
-        return JsonResponse({'status': 'error', 'message': 'invalid payload'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'invalid payload, expected {"order_id": int}'}, status=400)
 
+    # 2) courier from session
     courier_id = request.session.get('courier_id')
     if not courier_id:
-        return JsonResponse({'status': 'error', 'message': 'Not authenticated'}, status=401)
-
-    try:
-        order = Order.objects.get(pk=order_id)
-    except Order.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'order not found'}, status=404)
-
-    if order.status != 'pending':
-        return JsonResponse({'status': 'error', 'message': 'order not pending'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'Not authenticated (no courier_id in session)'}, status=401)
 
     try:
         courier = Courier.objects.get(pk=courier_id)
     except Courier.DoesNotExist:
-        # Clear invalid courier_id from session
-        try:
-            request.session.pop('courier_id', None)
-            request.session.pop('courier_name', None)
-            request.session.pop('courier_phone', None)
-        except Exception:
-            pass
-        return JsonResponse({'status': 'error', 'message': "courier not found"}, status=401)
+        # cleanup broken session
+        request.session.pop('courier_id', None)
+        request.session.pop('courier_name', None)
+        request.session.pop('courier_phone', None)
+        return JsonResponse({'status': 'error', 'message': 'courier not found in DB'}, status=401)
 
+    # 3) get order
+    try:
+        order = Order.objects.select_for_update().get(pk=order_id)
+    except Order.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'order not found'}, status=404)
+
+    # 4) rules
+    if order.status != 'pending':
+        return JsonResponse({'status': 'error', 'message': f'order not pending (status={order.status})'}, status=400)
+
+    if order.courier_id is not None:
+        return JsonResponse({'status': 'error', 'message': 'order already assigned'}, status=409)
+
+    # 5) accept
     order.courier = courier
     order.status = 'assigned'
-    order.save()
-    return JsonResponse({'status': 'ok', 'order_id': order.id})
+    order.save(update_fields=['courier', 'status'])
 
-
+    return JsonResponse({'status': 'ok', 'order_id': order.id, 'courier_id': courier.id})
 @csrf_exempt
 def api_confirm_delivery(request):
     """Courier confirms that an assigned/delivering order was delivered.
@@ -597,9 +608,7 @@ def api_confirm_delivery(request):
 
     return JsonResponse({'status': 'ok', 'order_id': order.id})
 
-
 def new_orders_page(request):
-    """Render a dedicated New Orders page. Data is fetched via `api_new_orders` for live updates."""
     courier = None
     courier_id = request.session.get('courier_id')
     if courier_id:
@@ -607,28 +616,40 @@ def new_orders_page(request):
             courier = Courier.objects.get(pk=courier_id)
         except Courier.DoesNotExist:
             courier = None
-    # Fetch pending orders to show to courier (render server-side initially)
-    try:
-        qs = Order.objects.filter(status='pending').order_by('-created_at')[:50]
-        new_orders = []
-        for o in qs:
-            client = o.client
-            new_orders.append({
-                'id': o.id,
-                'date': o.created_at,
-                'client': client.full_name if client else None,
-                'phone': client.phone if client else None,
-                'lat': getattr(client, 'location_lat', None),
-                'lon': getattr(client, 'location_lon', None),
-                'bottle_count': o.bottle_count,
-                'note': o.client_note or '',
-            })
-    except Exception:
-        new_orders = []
+
+    new_orders = []
+    qs = Order.objects.filter(status='pending').select_related('client').order_by('-created_at')[:50]
+
+    for o in qs:
+        client = getattr(o, "client", None)
+
+        bottles = (
+            getattr(o, "bottle_count", None)
+            or getattr(o, "bottles", None)
+            or getattr(o, "bottles_count", None)
+            or getattr(o, "bottle", None)
+            or 0
+        )
+        try:
+            bottles = int(bottles)
+        except Exception:
+            bottles = 0
+
+        note = getattr(o, "client_note", None) or getattr(o, "note", None) or ""
+
+        new_orders.append({
+            'id': o.id,
+            'date': o.created_at,
+            'client': getattr(client, "full_name", None) if client else None,
+            'phone': getattr(client, "phone", None) if client else None,
+            'lat': getattr(client, 'location_lat', None) if client else None,
+            'lon': getattr(client, 'location_lon', None) if client else None,
+            'bottle_count': bottles,
+            'note': note,
+        })
 
     context = {'courier': courier, 'new_orders': new_orders}
     return render(request, 'courier/new_orders.html', context)
-
 
 def history_page(request):
     """Render a dedicated History page. Currently shows static example rows."""
@@ -855,3 +876,40 @@ def profile_view(request):
             return redirect('courier_dashboard')
 
     return render(request, 'courier/profile.html', {'courier': courier})
+
+
+
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from suv_tashish_crm.models import Client
+from common.csv_utils import append_client_to_csv
+
+def add_client(request):
+    if request.method == "POST":
+        full_name = (request.POST.get("full_name") or "").strip()
+        phone = (request.POST.get("phone") or "").strip()
+        address = (request.POST.get("address") or "").strip()
+
+        if not full_name or not phone or not address:
+            messages.error(request, "Iltimos, barcha maydonlarni to‘ldiring.")
+            return render(request, "courier/add_client.html")
+
+        # ✅ 1) CSV doim yozilsin
+        csv_path = append_client_to_csv(full_name, phone, address,  source="courier")
+
+        # ✅ 2) DB: agar bor bo‘lsa update, bo‘lmasa create
+        obj, created = Client.objects.get_or_create(
+            phone=phone,
+            defaults={"full_name": full_name, "note": address},
+        )
+        if not created:
+            # bor bo‘lsa ma'lumotni yangilab qo'yamiz (xohlasangiz)
+            obj.full_name = full_name
+            obj.note = address
+            obj.save(update_fields=["full_name", "note"])
+
+        messages.success(request, f"✅ Saqlandi! CSV: {csv_path}")
+        return redirect("courier_panel:courier_dashboard")
+
+    return render(request, "courier/add_client.html")

@@ -1,5 +1,22 @@
 {
   "crm_admin": "CRM Админ",
+  "login_title": "Вход | Войти",
+  "welcome": "Добро пожаловать",
+  "login_subtitle": "Введите данные для входа в систему",
+  "user_type": "Тип пользователя",
+  "admin": "Админ",
+  "courier": "Курьер",
+  "client": "Клиент",
+  "full_name": "Полное имя",
+  "full_name_placeholder": "Например: Али Валиев",
+  "phone_optional": "Телефон (необязательно)",
+  "phone_label": "Телефон",
+  "login_label": "Логин",
+  "password_label": "Пароль",
+  "courier_name_label": "Имя курьера",
+  "name_placeholder": "Имя и фамилия",
+  "continue": "Продолжить",
+  "copyright": "© 2025 Delivery System. Все права защищены.",
   "courier_panel": "Панель курьера",
   "my_dashboard": "Моя панель",
   "quick_order": "Сделать заказ",
@@ -62,4 +79,12 @@
   "id": "ID",
   "client": "Клиент",
   "no_orders": "Нет заказов"
+  ,
+  "select_language_title": "Выберите язык",
+  "select_language_sub": "Выберите язык, чтобы продолжить",
+  "current": "Текущий",
+  "choose_btn": "Продолжить",
+  "choose_help": "Выберите язык и перейдите к входу."
+  ,
+  "change_language": "Изменить язык"
 }

@@ -4,16 +4,25 @@ from django.shortcuts import redirect
 from . import views
 
 urlpatterns = [
-    # Show login page by default; user must login to reach their dashboard
-    path('', lambda request: redirect('/login/')),
+    # Default -> choose language first, then login
+    path('', views.choose_language, name='choose_language'),
+
+    # Auth
     path('login/', views.login_view, name='login'),
+    path('register/', views.register_view, name='register'),
     path('set_language/', views.set_language, name='set_language'),
+    path('change_language/', views.change_language, name='change_language'),
     path('logout/', views.logout_view, name='logout'),
-    # login/logout removed per request
+
+    # Django admin (FAKAT 1 MARTA)
     path('admin/', admin.site.urls),
-    path('admin_panel/', include('admin_panel.urls')),
-    path('courier_panel/', include('courier_panel.urls')),
-    path('client_panel/', include('client_panel.urls')),
-    # API endpoints for client_panel (REST)
-    path('api/client_panel/', include('client_panel.api_urls')),
+
+    # Panels (namespace bilan)
+    path('admin_panel/', include(('admin_panel.urls', 'admin_panel'), namespace='admin_panel')),
+    path('courier_panel/', include(('courier_panel.urls', 'courier_panel'), namespace='courier_panel')),
+    path('client_panel/', include(('client_panel.urls', 'client_panel'), namespace='client_panel')),
+
+    # API
+    path('api/', include('api.urls')),
+    
 ]

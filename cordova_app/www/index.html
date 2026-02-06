@@ -16,6 +16,11 @@
     <label>Note: <input id="note" value="Cordova demo"></label><br>
     <button id="send">Buyurtma yuborish</button>
   </div>
+  <div style="margin-top:1rem">
+    <button id="btnCamera">Kamera</button>
+    <button id="btnLocation">Geolocation</button>
+    <button id="btnRegisterPush">Push ro'yxatdan o'tkazish</button>
+  </div>
   <pre id="log" style="white-space:pre-wrap;background:#f7f7f7;padding:8px;margin-top:1rem"></pre>
 
   <script>
@@ -45,6 +50,7 @@
   document.getElementById('send').addEventListener('click', sendOrder);
   </script>
 
+  <script src="js/native.js"></script>
   <script src="js/config.js"></script>
 </body>
 </html>

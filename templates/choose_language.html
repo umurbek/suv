@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ T.select_language_title|default:'Tilni tanlang' }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body{font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#071028 0%,#021026 100%);}
+    .chooser-card{background:rgba(255,255,255,0.03);backdrop-filter:blur(8px);border-radius:20px;padding:26px;border:1px solid rgba(255,255,255,0.04);max-width:520px}
+    .lang-item{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:12px;background:rgba(255,255,255,0.02);cursor:pointer}
+    .lang-item:hover{background:rgba(255,255,255,0.04)}
+    .radio-dot{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);display:inline-block}
+    .radio-dot.checked{background:linear-gradient(90deg,#3b82f6,#2563eb);border-color:transparent}
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6">
+  <form method="POST" action="" class="chooser-card w-full mx-4">
+    {% csrf_token %}
+    <div class="flex items-center justify-center mb-4">
+      <div class="w-12 h-12 rounded-lg bg-gradient-to-tr from-blue-500 to-cyan-400 flex items-center justify-center mr-3">
+        <i class="fa-solid fa-droplet text-white"></i>
+      </div>
+      <div class="text-left">
+        <h1 class="text-xl font-bold text-white">{{ T.select_language_title|default:'Tilni tanlang' }}</h1>
+        <p class="text-sm text-slate-300">{{ T.select_language_sub|default:'Select a language to continue' }}</p>
+      </div>
+    </div>
+
+    <div class="space-y-3 mb-6">
+      {% for code,label in LANG_OPTIONS %}
+      <label class="block">
+        <input type="radio" name="lang" value="{{ code }}" class="hidden lang-radio" {% if current_lang == code %}checked{% endif %}>
+        <div class="lang-item text-white">
+          <div class="flex items-center gap-3">
+            <span class="font-medium">{{ label }}</span>
+          </div>
+          <span class="radio-dot {% if current_lang == code %}checked{% endif %}"></span>
+        </div>
+      </label>
+      {% endfor %}
+    </div>
+
+    <button type="submit" class="w-full mt-2 py-3 rounded-lg text-white font-semibold" style="background:linear-gradient(90deg,#3b82f6,#2563eb);">{{ T.choose_btn|default:'Davom etish' }}</button>
+
+    <p class="text-xs text-slate-400 mt-4 text-center">{{ T.choose_help|default:'Pick a language then proceed to login.' }}</p>
+  </form>
+
+  <script>
+    // enhance radio visuals
+    document.querySelectorAll('.lang-item').forEach(function(item){
+      item.addEventListener('click', function(){
+        var input = this.previousElementSibling;
+        if(input){ input.checked = true; }
+        document.querySelectorAll('.radio-dot').forEach(d=>d.classList.remove('checked'));
+        this.querySelector('.radio-dot').classList.add('checked');
+      });
+    });
+  </script>
+</body>
+</html>

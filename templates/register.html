@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ro'yxatdan o'tish</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded shadow-lg w-full max-w-lg">
+        <h1 class="text-2xl font-bold mb-4">Ro'yxatdan o'tish</h1>
+        {% if error %}
+        <div class="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700">{{ error }}</div>
+        {% endif %}
+        <form method="POST" action="{% url 'register' %}" id="register-form">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 gap-4">
+                <label>Rol
+                    <select name="role" class="w-full p-2 border rounded">
+                        <option value="client">Mijoz (Client)</option>
+                        <option value="courier">Kuryer (Courier)</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </label>
+                <label>To'liq ism
+                    <input name="full_name" class="w-full p-2 border rounded" placeholder="Ism va familiya">
+                </label>
+                <label>Telefon
+                    <input name="phone" class="w-full p-2 border rounded" placeholder="+998901234567">
+                </label>
+                <label>Username
+                    <input name="username" class="w-full p-2 border rounded" required>
+                </label>
+                <label>Parol
+                    <input name="password" type="password" class="w-full p-2 border rounded" required>
+                </label>
+                <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded">Ro'yxatdan o'tish</button>
+            </div>
+        </form>
+        <p class="mt-4 text-sm">Agar hisobingiz bo'lsa — <a href="{% url 'login' %}" class="text-blue-600">Kirish</a></p>
+    </div>
+</body>
+</html>

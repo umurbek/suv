@@ -3,6 +3,35 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from suv_tashish_crm.models import Order
 from .serializers import OrderSerializer
+from rest_framework.views import APIView
+from rest_framework import status
+from .models import PushToken
+
+
+class RegisterPushToken(APIView):
+    """Endpoint to register/update a device FCM token from the mobile app."""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        token = request.data.get('token') or request.data.get('fcm_token')
+        client_id = request.data.get('client_id') or request.data.get('user_id')
+        platform = request.data.get('platform')
+        if not token:
+            return Response({'detail': 'token required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        obj, created = PushToken.objects.get_or_create(token=token, defaults={'client_id': client_id, 'platform': platform})
+        if not created:
+            changed = False
+            if client_id and obj.client_id != client_id:
+                obj.client_id = client_id
+                changed = True
+            if platform and obj.platform != platform:
+                obj.platform = platform
+                changed = True
+            if changed:
+                obj.save()
+
+        return Response({'status': 'ok', 'created': created})
 
 
 class OrderViewSet(viewsets.ReadOnlyModelViewSet):

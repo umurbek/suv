@@ -228,3 +228,118 @@
 [2025-12-25T13:09:50.883023] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
 [2025-12-25T13:13:22.337288] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
 [2025-12-25T13:14:55.233123] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2025-12-25T19:53:03.636526] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-25T20:08:59.887623] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-26T17:21:33.272694] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-26T17:21:46.873880] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-26T17:22:02.939651] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-26T17:24:48.622126] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2025-12-26T17:36:18.298153] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2025-12-26T17:41:43.891099] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2025-12-26T17:41:58.675647] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2025-12-26T17:44:51.712863] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-26T17:45:03.080516] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-26T17:45:08.490646] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2025-12-26T17:52:09.456267] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-26T17:52:31.563172] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-26T17:52:40.874050] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2025-12-27T18:38:03.733151] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-27T18:38:15.834797] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-27T18:38:30.390139] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-27T18:56:38.991575] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-27T18:58:21.466879] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-27T19:14:02.526424] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-27T19:16:30.359372] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2025-12-27T19:53:08.413861] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-27T19:53:26.320107] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2025-12-27T20:02:07.659604] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2025-12-27T20:08:55.095723] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2025-12-27T20:13:23.503522] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-27T20:13:27.159038] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2025-12-27T20:15:15.802288] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2025-12-29T23:50:32.371491] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2025-12-31T18:06:01.276945] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-01T10:41:20.664510] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-02T09:42:02.433251] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-13T04:06:52.252875] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-13T05:41:59.080463] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-13T05:42:33.599666] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-13T05:42:59.146366] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-13T05:53:56.312956] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2026-01-13T05:56:01.711984] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2026-01-17T08:46:52.872130] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-17T19:30:25.101591] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-17T19:32:17.709856] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-17T19:32:41.366447] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-17T19:33:09.790944] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2026-01-17T19:33:33.554945] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-17T19:33:43.297978] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-17T19:34:30.142633] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2026-01-17T19:34:52.274777] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-17T20:00:07.981300] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-18T05:37:03.614605] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-18T05:37:24.240085] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-23T11:06:32.161466] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-26T20:58:05.272287] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-26T21:56:41.486242] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-30T12:26:15.326387] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-30T12:27:28.123042] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-30T12:28:04.571473] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2026-01-30T12:29:02.970356] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2026-01-30T12:29:16.594200] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2026-01-30T15:10:35.124257] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-30T15:10:58.250334] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2026-01-30T15:11:04.707641] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2026-01-30T15:11:35.834972] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-30T15:14:46.833040] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-30T15:15:37.328416] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-30T15:35:51.833003] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-30T18:55:41.462145] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-30T18:56:07.967043] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2026-01-30T18:58:14.581563] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-30T18:58:31.904087] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-30T18:58:40.192938] SEND text='📦 Yangi buyurtma\nTim'... status=200 ok=True
+[2026-01-30T19:00:09.450930] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2026-01-30T19:00:12.692269] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2026-01-30T19:12:15.798187] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-30T19:31:38.583341] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-30T19:38:01.029256] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-31T19:43:28.088046] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-31T19:44:13.633730] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-31T19:44:43.839196] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-31T21:03:41.993169] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-31T21:03:50.324951] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-31T21:07:06.001084] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-01-31T21:13:21.322197] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-02-02T17:47:59.811462] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-02-02T17:58:11.194998] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-02-02T18:12:55.892296] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2026-02-02T18:13:06.335478] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2026-02-02T18:13:10.019549] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2026-02-02T18:16:21.480934] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-02-02T19:39:02.653212] SEND text='✅ Buyurtma yetkazild'... status=200 ok=True
+[2026-02-02T22:08:39.609105] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-02-02T22:32:06.557021] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-02-02T22:46:43.651212] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-02-02T22:57:33.461389] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-02-02T22:57:35.673641] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-02-02T22:58:05.124161] SEND text='🔔 Yangi login\nRole: '... status=200 ok=True
+[2026-02-03T00:32:48.035397] MISSING_CONFIG text='🔔 Yangi login\nRole: Admin\nTime: 2026-02-03 05:32:48\nDevice: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0\nName: umurbek\nPhone: \nID: umurbek'
+[2026-02-03T10:25:04.352820] MISSING_CONFIG text='🔔 Yangi login\nRole: Admin (DEV)\nTime: 2026-02-03 15:25:04\nDevice: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\nName: admin\nPhone: \nID: dev-admin'
+[2026-02-03T10:25:16.313833] MISSING_CONFIG text='🔔 Yangi login\nRole: Courier\nTime: 2026-02-03 15:25:16\nDevice: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\nName: testcuryer\nPhone: +998889995555\nID: 1'
+[2026-02-03T11:29:10.035734] MISSING_CONFIG text='🔔 Yangi login\nRole: Admin (DEV)\nTime: 2026-02-03 16:29:10\nDevice: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\nName: admin\nPhone: \nID: dev-admin'
+[2026-02-03T11:29:18.415996] MISSING_CONFIG text='🔔 Yangi login\nRole: Courier\nTime: 2026-02-03 16:29:18\nDevice: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\nName: testcuryer\nPhone: +998889995555\nID: 1'
+[2026-02-03T12:06:04.771803] MISSING_CONFIG text='🔔 Yangi login\nRole: Client\nTime: 2026-02-03 17:06:04\nDevice: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\nName: Jahongir Beshimov\nPhone: +998936537552\nID: 1'
+[2026-02-03T13:03:37.158461] MISSING_CONFIG text='🔔 Yangi login\nRole: Client\nTime: 2026-02-03 18:03:37\nDevice: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0\nName: umurbek\nPhone: +998770394499\nID: C2E91B2ACD0'
+[2026-02-03T13:07:14.344501] MISSING_CONFIG text='🔔 Yangi login\nRole: Courier\nTime: 2026-02-03 18:07:14\nDevice: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0\nName: Umurbek\nPhone: +998770394499\nID: 2'
+[2026-02-03T15:01:45.603046] MISSING_CONFIG text='🔔 Yangi login\nRole: Admin (DEV)\nTime: 2026-02-03 20:01:45\nDevice: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0\nName: admin\nPhone: \nID: dev-admin'
+[2026-02-04T00:32:36.248154] MISSING_CONFIG text='🔔 Yangi login\nRole: Admin (DEV)\nTime: 2026-02-04 05:32:36\nDevice: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0\nName: admin\nPhone: \nID: dev-admin'
+[2026-02-04T01:37:29.141461] MISSING_CONFIG text='🔔 Yangi login\nRole: Admin (DEV)\nTime: 2026-02-04 06:37:29\nDevice: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0\nName: admin\nPhone: \nID: dev-admin'
+[2026-02-04T07:02:36.672085] MISSING_CONFIG text='🔔 Yangi login\nRole: Client\nTime: 2026-02-04 12:02:36\nDevice: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\nName: Jahongir Beshimov\nPhone: +998936537552\nID: 1'
+[2026-02-04T07:03:40.870893] MISSING_CONFIG text='🔔 Yangi login\nRole: Courier\nTime: 2026-02-04 12:03:40\nDevice: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\nName: testcuryer\nPhone: +998889995555\nID: 1'
+[2026-02-04T07:04:37.812947] MISSING_CONFIG text='🔔 Yangi login\nRole: Admin (DEV)\nTime: 2026-02-04 12:04:37\nDevice: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\nName: admin\nPhone: \nID: dev-admin'
+[2026-02-04T15:40:05.345398] MISSING_CONFIG text='🔔 Yangi login\nRole: Admin (DEV)\nTime: 2026-02-04 20:40:05\nDevice: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\nName: admin\nPhone: \nID: dev-admin'
+[2026-02-04T15:40:18.332008] MISSING_CONFIG text='🔔 Yangi login\nRole: Courier\nTime: 2026-02-04 20:40:18\nDevice: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\nName: testcuryer\nPhone: +998889995555\nID: 317'
+[2026-02-04T15:40:36.049937] MISSING_CONFIG text='✅ Buyurtma yetkazildi\nOrder ID: #2\nCourier: testcuryer\nTime: 2026-02-04 20:40:36'
+[2026-02-04T15:41:05.403964] MISSING_CONFIG text='🔔 Yangi login\nRole: Admin\nTime: 2026-02-04 20:41:05\nDevice: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\nName: umurbek\nPhone: \nID: umurbek'
+[2026-02-04T15:42:11.438184] MISSING_CONFIG text='🔔 Yangi login\nRole: Admin\nTime: 2026-02-04 20:42:11\nDevice: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0\nName: umurbek\nPhone: \nID: umurbek'

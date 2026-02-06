@@ -1,74 +1,138 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="{{ current_lang|default:'en' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | Kirish</title>
+    <title>{{ T.login_title|default:'Login | AquaFlow' }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            /* Dashboard foniga mos ranglar */
+            background-color: #060b26;
+            background-image: radial-gradient(circle at 20% 30%, #0d143c 0%, #060b26 100%);
         }
-        .input-focus {
-            transition: all 0.2s ease-in-out;
+
+        .aqua-glass {
+            background: rgba(13, 20, 60, 0.7);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
-        .input-focus:focus {
+
+        .input-dark {
+            background: rgba(6, 11, 38, 0.8);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .input-dark:focus {
             border-color: #3b82f6;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
             outline: none;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.6);
+            transform: scale(1.02);
+        }
+
+        .neon-text {
+            color: #60a5fa;
+            text-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
+        }
+
+        .floating-orb {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
+            z-index: -1;
+            border-radius: 50%;
         }
     </style>
 </head>
-<body class="bg-slate-50 flex items-center justify-center min-h-screen p-4">
-    <div class="glass-card p-10 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Xush kelibsiz</h1>
-            <p class="text-gray-500 mt-2">Tizimga kirish uchun ma'lumotlarni kiriting</p>
+<body class="flex items-center justify-center min-h-screen p-6 relative overflow-hidden">
+
+    <div class="floating-orb -top-20 -left-20"></div>
+    <div class="floating-orb -bottom-20 -right-20"></div>
+
+    <div class="aqua-glass p-8 md:p-12 rounded-[2rem] w-full max-w-[460px] relative z-10">
+        
+        <div class="flex justify-between items-center mb-10">
+            <div class="flex items-center gap-2">
+                <div class="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-droplet text-white text-xl"></i>
+                </div>
+                <span class="text-white font-bold text-xl tracking-wider uppercase">Aqua<span class="text-blue-500">Flow</span></span>
+            </div>
+                {% if not request.session.lang %}
+                <form method="GET" action="/set_language/" class="relative">
+                    <select name="lang" onchange="this.form.submit()" class="appearance-none bg-blue-900/30 border border-blue-500/30 rounded-lg px-4 py-1.5 text-xs font-semibold text-blue-300 focus:outline-none cursor-pointer pr-8">
+                        {% for code,label in LANG_OPTIONS %}
+                        <option value="{{ code }}" {% if current_lang == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-blue-400 pointer-events-none"></i>
+                </form>
+                {% endif %}
         </div>
 
-        <form method="POST" action="{% url 'login' %}" id="role-form" novalidate class="space-y-5">
+        {% if request.session.lang %}
+        <div class="text-right mb-4">
+            <a href="{% url 'change_language' %}" class="text-xs text-blue-300/60 hover:underline">{{ T.change_language|default:"Tilni o\'zgartirish" }}</a>
+        </div>
+        {% endif %}
+
+        <div class="mb-8">
+            <h1 class="text-3xl font-extrabold text-white tracking-tight leading-tight">
+                {{ T.welcome|default:'Welcome' }}
+            </h1>
+            <p class="text-blue-300/60 mt-2 font-medium">{{ T.login_subtitle|default:"Enter credentials to sign in" }}</p>
+        </div>
+
+        <form method="POST" action="{% url 'login' %}" id="role-form" novalidate class="space-y-6">
             {% csrf_token %}
             
             <div id="form-error">
                 {% if error %}
-                <div class="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded text-sm animate-pulse">
+                <div class="p-4 bg-red-900/30 border border-red-500/50 text-red-200 rounded-xl text-sm flex items-center gap-3">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
                     {{ error }}
                 </div>
                 {% endif %}
             </div>
 
             <div>
-                <label for="role" class="block text-sm font-semibold text-gray-700 mb-1">Foydalanuvchi turi</label>
-                <select id="role" name="role" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-gray-900 input-focus cursor-pointer">
-                    <option value="admin" {% if selected_role == 'admin' %}selected{% endif %}>Admin</option>
-                    <option value="courier" {% if selected_role == 'courier' %}selected{% endif %}>Kuryer (Courier)</option>
-                    <option value="client" {% if selected_role == 'client' %}selected{% endif %}>Mijoz (Client)</option>
+                <label class="block text-[11px] font-bold text-blue-400 uppercase tracking-widest mb-3 ml-1">Foydalanuvchi roli</label>
+                <select id="role" name="role" class="w-full input-dark rounded-xl p-4 font-semibold appearance-none cursor-pointer">
+                    <option value="admin">🔑 {{ T.admin|default:'Administrator' }}</option>
+                    <option value="courier">🛵 {{ T.courier|default:'Kuryer' }}</option>
+                    <option value="client">👤 {{ T.client|default:'Mijoz' }}</option>
                 </select>
             </div>
 
-            <hr class="border-gray-100">
-
             <div id="admin-fields" class="role-fields space-y-4">
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">To'liq ism</label>
-                    <input type="text" id="admin-name" name="admin_name" placeholder="Masalan: Ali Valiyev" value="{{ admin_name|default:'' }}" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 input-focus">
+                        <label class="block text-sm font-semibold text-blue-200 mb-2 ml-1">{{ T.login_label|default:'Login' }}</label>
+                    <input type="text" name="username" value="admin" class="w-full input-dark rounded-xl p-4">
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Telefon raqam (Ixtiyoriy)</label>
-                    <input type="text" id="admin-phone" name="admin_phone" placeholder="+998901234567" value="{{ admin_phone|default:'' }}" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 input-focus">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Login</label>
-                    <input type="text" id="admin-user" name="username" value="{{ username|default:'admin' }}" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 input-focus">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Parol</label>
+                        <label class="block text-sm font-semibold text-blue-200 mb-2 ml-1">{{ T.password_label|default:'Password' }}</label>
                     <div class="relative">
-                        <input type="password" id="password" name="password" placeholder="••••••••" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 input-focus">
-                        <button type="button" id="toggle-login-password" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-900">
+                        <input type="password" id="password" name="password" placeholder="••••••••" class="w-full input-dark rounded-xl p-4">
+                        <button type="button" id="toggle-login-password" class="absolute right-4 top-1/2 -translate-y-1/2 text-blue-400 hover:text-white transition-colors">
                             <i id="toggle-login-icon" class="fa-solid fa-eye"></i>
                         </button>
                     </div>
@@ -76,137 +140,63 @@
             </div>
 
             <div id="courier-fields" class="role-fields hidden space-y-4">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Kuryer ismi</label>
-                    <input type="text" id="courier-name" name="courier_name" placeholder="Ism va familiya" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 input-focus">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Telefon raqam</label>
-                    <input type="text" id="courier-phone" name="courier_phone" value="+998" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 input-focus">
-                </div>
+                <input type="text" name="courier_name" placeholder="Ismingiz" class="w-full input-dark rounded-xl p-4">
+                <input type="text" name="courier_phone" value="+998" class="w-full input-dark rounded-xl p-4">
             </div>
 
             <div id="client-fields" class="role-fields hidden space-y-4">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">To'liq ism</label>
-                    <input type="text" id="client-name" name="client_name" placeholder="Ism va familiya" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 input-focus">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Telefon raqam</label>
-                    <input type="text" id="client-phone" name="phone" value="+998" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 input-focus">
-                </div>
-                <input type="hidden" id="location-lat" name="location_lat" value="">
-                <input type="hidden" id="location-lon" name="location_lon" value="">
+                <input type="text" name="client_name" placeholder="F.I.SH" class="w-full input-dark rounded-xl p-4">
+                <input type="text" name="phone" value="+998" class="w-full input-dark rounded-xl p-4">
             </div>
 
-            <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:from-blue-700 hover:to-indigo-700 transition duration-300 transform hover:-translate-y-0.5 active:scale-95 mt-6">
-                Davom etish
+            <button type="submit" id="submit-btn" class="w-full btn-primary text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-3">
+                <span>{{ T.choose_btn|default:'Continue' }}</span>
+                <i class="fa-solid fa-arrow-right-to-bracket"></i>
             </button>
         </form>
 
-        <p class="text-center text-xs text-gray-400 mt-8">
-            &copy; 2025 Delivery System. Barcha huquqlar himoyalangan.
-        </p>
+        <div class="mt-8 pt-6 border-t border-blue-900/50">
+            <p class="text-center text-xs font-medium text-blue-400/50">
+                &copy; 2026 AQUAFLOW MANAGEMENT v2.5
+            </p>
+        </div>
     </div>
 
 <script>
-// Logic qismi o'zgarishsiz qoldi, faqat UI bilan bog'liq kichik tuzatishlar
-const roleSelect = document.getElementById('role');
-function updateFields() {
-    const role = roleSelect.value;
-    document.querySelectorAll('.role-fields').forEach(el => el.classList.add('hidden'));
-    
-    const adminFields = document.querySelectorAll('#admin-fields input');
-    const courierFields = document.querySelectorAll('#courier-fields input');
-    const clientFields = document.querySelectorAll('#client-fields input');
+    // Dinamik inputlarni boshqarish
+    const roleSelect = document.getElementById('role');
+    const fields = document.querySelectorAll('.role-fields');
 
-    [...adminFields, ...courierFields, ...clientFields].forEach(i => i.required = false);
-
-    if (role === 'admin') {
-        document.getElementById('admin-fields').classList.remove('hidden');
-        adminFields.forEach(i => { if(i.id !== 'admin-phone') i.required = true; });
-    } else if (role === 'courier') {
-        document.getElementById('courier-fields').classList.remove('hidden');
-        courierFields.forEach(i => i.required = true);
-    } else if (role === 'client') {
-        document.getElementById('client-fields').classList.remove('hidden');
-        clientFields.forEach(i => i.required = true);
-    }
-}
-
-roleSelect.addEventListener('change', updateFields);
-window.onload = updateFields;
-
-// Form Submit handling (Sizning mavjud JS kodingiz...)
-const form = document.getElementById('role-form');
-form.addEventListener('submit', async function (ev) {
-    ev.preventDefault();
-    function showError(msg){
-        const container = document.getElementById('form-error');
-        container.innerHTML = `<div class="p-4 mb-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded text-sm">${msg}</div>`;
-    }
-    
-    // ... (Sizning qolgan JS validatsiya va Fetch kodingiz bu yerda davom etadi)
-    // Yuqoridagi JS kodingizni aynan shu yerga qo'shib qo'ying.
-    
-    const submitBtn = form.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = `
-        <svg class="animate-spin h-5 w-5 mr-3 inline-block text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg> Yuklanmoqda...`;
-
-    // Fetch qismini va manzil olishni o'zingizning kodingizdek davom ettiring
-    const fd = new FormData(form);
-    const role = roleSelect.value;
-
-    if (role === 'client' && navigator.geolocation) {
-        const pos = await new Promise(resolve => {
-            navigator.geolocation.getCurrentPosition(p => resolve(p), () => resolve(null), {timeout: 5000});
-        });
-        if (pos) {
-            fd.set('location_lat', pos.coords.latitude);
-            fd.set('location_lon', pos.coords.longitude);
-        }
+    function updateFields() {
+        const role = roleSelect.value;
+        fields.forEach(el => el.classList.add('hidden'));
+        document.getElementById(`${role}-fields`).classList.remove('hidden');
     }
 
-    try {
-        const resp = await fetch(form.action || window.location.pathname, {
-            method: 'POST',
-            headers: {'X-Requested-With': 'XMLHttpRequest'},
-            body: fd
-        });
-        const data = await resp.json();
-        if (data.status === 'ok') {
-            window.location.href = data.next;
+    roleSelect.addEventListener('change', updateFields);
+    
+    // Parolni ko'rsatish/yashirish
+    document.getElementById('toggle-login-password').addEventListener('click', function() {
+        const passInput = document.getElementById('password');
+        const icon = document.getElementById('toggle-login-icon');
+        if (passInput.type === 'password') {
+            passInput.type = 'text';
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
         } else {
-            showError(data.message || 'Xatolik yuz berdi');
-            submitBtn.disabled = false;
-            submitBtn.innerText = 'Davom etish';
-        }
-    } catch (err) {
-        showError('Tarmoq xatosi yuz berdi');
-        submitBtn.disabled = false;
-        submitBtn.innerText = 'Davom etish';
-    }
-});
-// Toggle login password visibility
-(function(){
-    const btn = document.getElementById('toggle-login-password');
-    const input = document.getElementById('password');
-    const icon = document.getElementById('toggle-login-icon');
-    if(!btn || !input || !icon) return;
-    btn.addEventListener('click', function(){
-        if(input.type === 'password'){
-            input.type = 'text';
-            icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye');
+            passInput.type = 'password';
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
         }
     });
-})();
+
+    // Submit handling (Ajax logic)
+    const form = document.getElementById('role-form');
+    form.addEventListener('submit', function(e) {
+        // Show loading state and allow normal form submission
+        const btn = document.getElementById('submit-btn');
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin"></i> Kutilmoqda...`;
+        // let the browser submit the form (no preventDefault)
+    });
 </script>
 </body>
 </html>

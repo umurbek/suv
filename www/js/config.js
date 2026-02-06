@@ -9,4 +9,10 @@
 
 const API_BASE = 'https://api.sizningdomen.uz/';
 
-export { API_BASE };
+// Google Maps API key for Cordova webviews. Replace at build-time or keep as
+// empty string to require runtime injection from server-side configuration.
+// WARNING: Embedding API keys in client-side code can expose them. Prefer
+// restricting the key to allowed domains in Google Cloud Console.
+const GOOGLE_MAPS_API_KEY = 'AIzaSyDQYQGDSrKUOfwW0PC2Tw7YfdZVWoNqQs0';
+
+export { API_BASE, GOOGLE_MAPS_API_KEY };

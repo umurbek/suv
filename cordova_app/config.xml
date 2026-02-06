@@ -7,7 +7,22 @@
     <author email="dev@cordova.apache.org" href="https://cordova.apache.org">
         Apache Cordova Team
     </author>
-    <content src="index.html" />
+    <!-- Load the live site so the app looks exactly like the website during testing -->
+    <content src="http://192.168.241.174:8000/" />
+    <allow-navigation href="http://192.168.241.174/*" />
+    <access origin="http://192.168.241.174/*" />
+    <access origin="*" />
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
+
+    <!-- Plugins: camera, geolocation, and Firebase (FCM) for push notifications -->
+    <plugin name="cordova-plugin-camera" spec="^6.0.0" />
+    <plugin name="cordova-plugin-geolocation" spec="^4.1.0" />
+    <!-- cordova-plugin-firebasex removed for build without FCM; add back when google-services.json is available -->
+    <plugin name="cordova-plugin-android-permissions" spec="^1.1.4" />
+    <plugin name="cordova-plugin-file" spec="^6.0.2" />
+
+    <!-- Preferences for Android builds -->
+    <preference name="AndroidXEnabled" value="true" />
+    <preference name="GradlePluginKotlinEnabled" value="false" />
 </widget>

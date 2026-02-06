@@ -1,5 +1,22 @@
 {
   "crm_admin": "CRM Admin",
+  "login_title": "Login | Kirish",
+  "welcome": "Xush kelibsiz",
+  "login_subtitle": "Tizimga kirish uchun ma'lumotlarni kiriting",
+  "user_type": "Foydalanuvchi turi",
+  "admin": "Admin",
+  "courier": "Kuryer (Courier)",
+  "client": "Mijoz (Client)",
+  "full_name": "To'liq ism",
+  "full_name_placeholder": "Masalan: Ali Valiyev",
+  "phone_optional": "Telefon raqam (Ixtiyoriy)",
+  "phone_label": "Telefon raqam",
+  "login_label": "Login",
+  "password_label": "Parol",
+  "courier_name_label": "Kuryer ismi",
+  "name_placeholder": "Ism va familiya",
+  "continue": "Davom etish",
+  "copyright": "© 2025 Delivery System. Barcha huquqlar himoyalangan.",
   "courier_panel": "Kuryer Paneli",
   "my_dashboard": "Mening dashboard",
   "quick_order": "Buyurtma berish",
@@ -62,4 +79,12 @@
   "id": "ID",
   "client": "Mijoz",
   "no_orders": "Buyurtma yo'q"
+  ,
+  "select_language_title": "Tilni tanlang",
+  "select_language_sub": "Davom etish uchun tilni tanlang",
+  "current": "Joriy",
+  "choose_btn": "Davom etish",
+  "choose_help": "Tilni tanlang va tizimga o'ting."
+  ,
+  "change_language": "Tilni o'zgartirish"
 }

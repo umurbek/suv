@@ -1,5 +1,22 @@
 {
   "crm_admin": "CRM Админ",
+  "login_title": "Login | Кириш",
+  "welcome": "Хуш келибсиз",
+  "login_subtitle": "Тизимга кириш учун маълумотларни киритинг",
+  "user_type": "Фойдаланувчи тури",
+  "admin": "Админ",
+  "courier": "Курьер (Courier)",
+  "client": "Мижоз (Client)",
+  "full_name": "Тўлиқ исм",
+  "full_name_placeholder": "Масалан: Али Валиев",
+  "phone_optional": "Телефон рақам (Ихтиёрий)",
+  "phone_label": "Телефон рақам",
+  "login_label": "Login",
+  "password_label": "Парол",
+  "courier_name_label": "Курьер исми",
+  "name_placeholder": "Исм ва фамилия",
+  "continue": "Давом этиш",
+  "copyright": "© 2025 Delivery System. Барча ҳуқуқлар ҳимояланган.",
   "courier_panel": "Курьер Панели",
   "my_dashboard": "Менинг dashboard",
   "quick_order": "Буюртма бериш",
@@ -62,4 +79,12 @@
   "id": "ID",
   "client": "Мижоз",
   "no_orders": "Буюртма йўқ"
+  ,
+  "select_language_title": "Тилни танланг",
+  "select_language_sub": "Давом этиш учун тилни танланг",
+  "current": "Жорий",
+  "choose_btn": "Давом этиш",
+  "choose_help": "Тилни танланг ва тизимга ўтинг."
+  ,
+  "change_language": "Тилни ўзгартириш"
 }

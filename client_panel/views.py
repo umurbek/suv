@@ -7,7 +7,36 @@ from decimal import Decimal
 from django.utils import timezone
 from datetime import timedelta
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import Order
+@csrf_exempt
+def api_create_order(request):
+    if request.method == 'POST':
+        try:
+            # HTML dagi FormData kalitlari bilan bir xil bo'lishi shart
+            bottles_count = request.POST.get('bottles', 1)
+            note_content = request.POST.get('note', '')
+            latitude = request.POST.get('lat')
+            longitude = request.POST.get('lon')
 
+            # Ma'lumotni saqlash
+            new_order = Order.objects.create(
+                bottles=int(bottles_count),
+                note=note_content,
+                lat=latitude if latitude and latitude != 'undefined' else None,
+                lon=longitude if longitude and longitude != 'undefined' else None,
+                status='pending'
+            )
+
+            return JsonResponse({
+                'status': 'ok', 
+                'order_id': new_order.id
+            })
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    
+    return JsonResponse({'status': 'error', 'message': 'Faqat POST so\'rovlar'}, status=405)
 def dashboard(request):
     client = None
     if request.session.get('client_id'):
@@ -61,27 +90,58 @@ def dashboard(request):
     return render(request, 'client/client_dashboard.html', ctx)
 
 
+def contract_view(request):
+    """Show contract/terms to client. Requires `client_id` in session.
+
+    POST with checkbox 'agree' will set `Client.agreed_to_contract=True` and
+    redirect to dashboard.
+    """
+    client = None
+    if request.session.get('client_id'):
+        try:
+            client = Client.objects.filter(id=request.session.get('client_id')).first()
+        except Exception:
+            client = None
+
+    # If no client in session, redirect to login
+    if not client:
+        return redirect('/login/')
+
+    if request.method == 'POST':
+        agree = request.POST.get('agree')
+        if agree == '1':
+            try:
+                client.agreed_to_contract = True
+                client.save(update_fields=['agreed_to_contract'])
+            except Exception:
+                pass
+            return redirect('/client_panel/dashboard/')
+
+    # Render contract template with checkbox
+    return render(request, 'client/contract.html', {'client': client})
+
+
 def orders_view(request):
-    # show order history for the logged-in client
     if not request.session.get('client_id'):
         return redirect('/login/')
+
     client = Client.objects.filter(id=request.session.get('client_id')).first()
     orders = []
+
     if client:
-        try:
-            from suv_tashish_crm.models import Order
-            qs = Order.objects.filter(client=client).order_by('-created_at')[:100]
-            for o in qs:
-                orders.append({
-                    'id': o.id,
-                    'created_at': o.created_at,
-                    'status': o.status,
-                    'bottles': o.bottle_count,
-                    'note': o.client_note,
-                    'amount': int(o.debt_change) if getattr(o, 'debt_change', None) is not None else 0,
-                })
-        except Exception:
-            orders = []
+        from suv_tashish_crm.models import Order
+        qs = Order.objects.filter(client=client).order_by('-created_at')[:100]
+
+        for o in qs:
+            orders.append({
+                'id': o.id,
+                'created_at': o.created_at,
+                'status': o.status,
+                'bottles': getattr(o, 'bottles', 0),   # ✅ to'g'ri field
+                'note': getattr(o, 'note', ''),        # ✅ to'g'ri field
+                'amount': int(getattr(o, 'debt_change', 0) or 0),
+            })
+
     return render(request, 'client/orders.html', {'client': client, 'orders': orders})
 
 
@@ -224,17 +284,46 @@ def api_update_profile(request):
     # If lat/lon provided, try reverse geocode to human-readable address and set region
     if lat and lon:
         try:
-            from geopy.geocoders import Nominatim
-            geolocator = Nominatim(user_agent='crm_app')
-            loc = geolocator.reverse(f"{lat},{lon}", language='en')
-            if loc and loc.address:
-                addr = loc.address
+            from django.conf import settings
+            addr = None
+            # Try Google Maps geocoding first (if available)
+            try:
+                import googlemaps
+                gmaps = googlemaps.Client(key=getattr(settings, 'GOOGLE_MAPS_API_KEY', None))
+            except Exception:
+                gmaps = None
+
+            if gmaps:
+                try:
+                    res = gmaps.reverse_geocode((float(lat), float(lon)))
+                    if res and len(res) > 0:
+                        addr = res[0].get('formatted_address')
+                except Exception:
+                    addr = None
+
+            # Fallback to Nominatim if Google not available or returned nothing
+            if not addr:
+                try:
+                    from geopy.geocoders import Nominatim
+                    geolocator = Nominatim(user_agent='crm_app')
+                    loc = geolocator.reverse(f"{lat},{lon}", language='en')
+                    if loc and getattr(loc, 'address', None):
+                        addr = loc.address
+                except Exception:
+                    addr = None
+
+            if addr:
                 from suv_tashish_crm.models import Region
                 region_obj, _ = Region.objects.get_or_create(name=addr)
                 client.region = region_obj
+
+            try:
                 client.location_lat = float(lat)
                 client.location_lon = float(lon)
-                client.save()
+            except Exception:
+                pass
+
+            client.save()
         except Exception:
             pass
     # If profile is now complete (has first_name and phone), notify admin and update CSV
@@ -287,16 +376,28 @@ def api_create_order(request):
     # minimal create order endpoint used by dashboard JS
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'POST required'})
+    # accept JSON or form data
+    data = {}
+    try:
+        if request.content_type == 'application/json':
+            data = json.loads(request.body.decode('utf-8'))
+        else:
+            data = request.POST
+    except Exception:
+        data = request.POST
+
     # ensure we have a client associated with the session. If not, try
-    # to fall back to client info included in the POST (name/phone) so
-    # mobile/web users don't get blocked when session cookies are lost.
+    # to fall back to client info included in the POST/JSON (name/phone)
+    # so mobile/web users don't get blocked when session cookies are lost.
     client = None
     if request.session.get('client_id'):
         client = Client.objects.filter(id=request.session.get('client_id')).first()
     if not client:
-        # try to find client by phone/name provided in the POST body
-        phone = (request.POST.get('phone') or request.POST.get('client_phone') or '').strip()
-        name = (request.POST.get('name') or request.POST.get('client_name') or '').strip()
+        # try to find client by phone/name provided in the POST/JSON body
+        phone = (data.get('phone') or data.get('client_phone') or '')
+        name = (data.get('name') or data.get('client_name') or '')
+        phone = phone.strip() if isinstance(phone, str) else ''
+        name = name.strip() if isinstance(name, str) else ''
         if phone:
             try:
                 # keep behavior consistent with login: create if missing
@@ -326,10 +427,10 @@ def api_create_order(request):
             return JsonResponse({'status': 'error', 'message': 'Not authenticated'})
     if not client:
         return JsonResponse({'status': 'error', 'message': 'Client not found'})
-    bottles = request.POST.get('bottles') or request.POST.get('bottle')
-    note = request.POST.get('note') or ''
-    lat = request.POST.get('lat') or request.POST.get('location_lat')
-    lon = request.POST.get('lon') or request.POST.get('location_lon')
+    bottles = data.get('bottles') or data.get('bottle')
+    note = data.get('note') or ''
+    lat = data.get('lat') or data.get('location_lat')
+    lon = data.get('lon') or data.get('location_lon')
     try:
         from suv_tashish_crm.models import Order
         bottle_count = int(bottles or 1)
@@ -338,13 +439,28 @@ def api_create_order(request):
         # return existing order id instead of creating a new one.
         try:
             recent_cutoff = timezone.now() - timedelta(seconds=10)
-            existing = Order.objects.filter(client=client, status='pending', bottle_count=bottle_count, client_note=note, created_at__gte=recent_cutoff).order_by('-created_at').first()
+            existing = Order.objects.filter(
+                client=client,
+                status='pending',
+                bottles=bottle_count,
+                note=note,
+                created_at__gte=recent_cutoff
+            ).order_by('-created_at').first()
             if existing:
                 return JsonResponse({'status': 'ok', 'order_id': existing.id, 'duplicate': True})
         except Exception:
             existing = None
 
-        o = Order.objects.create(client=client, bottle_count=bottle_count, client_note=note)
+            o = Order.objects.create(
+            client=client,
+            bottles=bottle_count,
+            note=note,
+            status='pending',
+            courier=None,
+            lat=float(lat) if lat else None,
+            lon=float(lon) if lon else None,
+        )
+
         # compute monetary amount server-side: 1 bottle = 12_000 UZS
         try:
             unit_price = 12000
@@ -358,14 +474,15 @@ def api_create_order(request):
             if lat and lon:
                 client.location_lat = float(lat)
                 client.location_lon = float(lon)
+                client.save()
         except Exception:
             pass
 
         # accept optional client name/phone/region updates from the order form
         try:
-            name = request.POST.get('name') or request.POST.get('first_name')
-            phone = request.POST.get('phone')
-            region_id = request.POST.get('region')
+            name = data.get('name') or data.get('first_name')
+            phone = data.get('phone')
+            region_id = data.get('region')
             updated = False
             if name:
                 # write into first_name (keep full_name unchanged)

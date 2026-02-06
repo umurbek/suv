@@ -14,7 +14,9 @@
             <p class="text-slate-400 text-sm mt-3 font-medium opacity-70 italic">Faol xodimlarni boshqarish va monitoring markazi</p>
         </div>
         
-        <a href="{% url 'add_courier' %}" class="relative inline-flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-cyan-400 text-white px-6 py-3 rounded-2xl font-bold transition-all hover:scale-[1.02] shadow-lg overflow-hidden">
+        <!-- ✅ FIX: namespace qo‘shildi -->
+        <a href="{% url 'admin_panel:add_courier' %}"
+           class="relative inline-flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-cyan-400 text-white px-6 py-3 rounded-2xl font-bold transition-all hover:scale-[1.02] shadow-lg overflow-hidden">
             <span class="relative z-10 flex items-center gap-2">
                 <i class="fa-solid fa-plus"></i>
                 YANGI KURYER QO'SHISH
@@ -34,6 +36,7 @@
                         <th class="px-10 py-7 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] text-right">Amallar</th>
                     </tr>
                 </thead>
+
                 <tbody class="divide-y divide-white/5">
                     {% for c in couriers %}
                     <tr class="hover:bg-blue-600/[0.03] transition-all group">
@@ -47,12 +50,14 @@
                                     <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-4 border-[#0f172a] rounded-full"></div>
                                     {% endif %}
                                 </div>
+
                                 <div>
                                     <div class="text-base font-bold text-white group-hover:text-blue-400 transition-colors">{{ c.full_name }}</div>
                                     <div class="text-[10px] text-slate-500 font-mono tracking-tighter uppercase mt-0.5">ID: #00{{ c.id }}</div>
                                 </div>
                             </div>
                         </td>
+
                         <td class="px-6 py-6 font-mono text-sm text-slate-300 group-hover:text-white transition-colors">
                             <i class="fa-solid fa-phone text-[10px] text-blue-500 mr-2"></i>
                             {% if c.phone %}
@@ -61,19 +66,21 @@
                                 —
                             {% endif %}
                         </td>
+
                         <td class="px-6 py-6 text-center">
-                                <span class="inline-block px-4 py-1.5 rounded-xl bg-slate-900/50 text-slate-400 text-xs font-bold border border-white/5 group-hover:border-blue-500/30 transition-all">
-                                    {% if c.region %}
-                                        {% if c.region.name %}
-                                            {{ c.region.name }}
-                                        {% else %}
-                                            {{ c.region }}
-                                        {% endif %}
+                            <span class="inline-block px-4 py-1.5 rounded-xl bg-slate-900/50 text-slate-400 text-xs font-bold border border-white/5 group-hover:border-blue-500/30 transition-all">
+                                {% if c.region %}
+                                    {% if c.region.name %}
+                                        {{ c.region.name }}
                                     {% else %}
-                                        Barcha hududlar
+                                        {{ c.region }}
                                     {% endif %}
+                                {% else %}
+                                    Barcha hududlar
+                                {% endif %}
                             </span>
                         </td>
+
                         <td class="px-6 py-6">
                             <div class="flex justify-center items-center">
                                 {% if c.is_active %}
@@ -89,17 +96,23 @@
                                 {% endif %}
                             </div>
                         </td>
+
                         <td class="px-10 py-6 text-right">
                             <div class="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-300">
-                                <a href="{% url 'edit_courier' courier_id=c.id %}" class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center shadow-lg">
+                                <a href="{% url 'admin_panel:edit_courier' courier_id=c.id %}"
+                                   class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center shadow-lg">
                                     <i class="fa-solid fa-pen-to-square text-sm"></i>
                                 </a>
-                                        <form method="post" action="{% url 'delete_courier' courier_id=c.id %}" class="inline delete-courier-form">
-                                            {% csrf_token %}
-                                            <button type="button" data-courier-id="{{ c.id }}" class="delete-courier-btn w-10 h-10 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-600 hover:text-white transition-all flex items-center justify-center">
-                                                <i class="fa-solid fa-trash-can text-sm"></i>
-                                            </button>
-                                        </form>
+
+                                <form method="post" action="{% url 'admin_panel:delete_courier' courier_id=c.id %}"
+                                      class="inline delete-courier-form">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            data-courier-id="{{ c.id }}"
+                                            class="delete-courier-btn w-10 h-10 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-600 hover:text-white transition-all flex items-center justify-center">
+                                        <i class="fa-solid fa-trash-can text-sm"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -110,7 +123,12 @@
                                 <i class="fa-solid fa-box-open text-4xl text-slate-500"></i>
                             </div>
                             <p class="text-slate-400 text-lg font-semibold">Hozircha hech qanday kuryer topilmadi.</p>
-                            <a href="{% url 'add_courier' %}" class="inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold">Birinchi kuryerni qo'shish</a>
+
+                            <!-- ✅ FIX: bu yerda ham namespace qo‘shildi -->
+                            <a href="{% url 'admin_panel:add_courier' %}"
+                               class="inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold">
+                               Birinchi kuryerni qo'shish
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -121,16 +139,14 @@
 </div>
 
 <style>
-    /* Barcha tashqi chiziqlarni va oq ramkalarni majburan o'chirish */
     table, th, td, tr { border: none !important; border-collapse: collapse !important; }
-    .animate-fadeIn {
-        animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
+    .animate-fadeIn { animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(20px); scale: 0.98; }
         to { opacity: 1; transform: translateY(0); scale: 1; }
     }
 </style>
+
 <!-- Confirmation modal + toast -->
 <div id="confirmModal" class="fixed inset-0 hidden items-center justify-center bg-black/50 z-50">
     <div class="bg-[#0f172a] p-6 rounded-2xl border border-white/5 max-w-md w-full">
@@ -147,52 +163,51 @@
 
 {% block extra_scripts %}
 <script>
-    (function(){
-        // Delete button handling
-        const modal = document.getElementById('confirmModal');
-        const confirmOk = document.getElementById('confirmOk');
-        const confirmCancel = document.getElementById('confirmCancel');
-        let activeForm = null;
+(function(){
+    const modal = document.getElementById('confirmModal');
+    const confirmOk = document.getElementById('confirmOk');
+    const confirmCancel = document.getElementById('confirmCancel');
+    let activeForm = null;
 
-        document.querySelectorAll('.delete-courier-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                activeForm = e.target.closest('form');
-                // show modal
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            });
+    document.querySelectorAll('.delete-courier-form').forEach(form => {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            activeForm = e.currentTarget;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         });
+    });
 
-        confirmCancel.addEventListener('click', () => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            activeForm = null;
-        });
+    confirmCancel.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        activeForm = null;
+    });
 
-        confirmOk.addEventListener('click', () => {
-            if (activeForm) {
-                // submit the form
-                activeForm.submit();
-            }
-        });
+    confirmOk.addEventListener('click', () => {
+        if (activeForm) activeForm.submit();
+    });
 
-        // Toast display for server-side flash_message
-        const flashMessage = {{ flash_message|default:'null'|safe }};
-        const flashType = {{ flash_type|default:'null'|safe }};
-        if (flashMessage) {
-            const toast = document.getElementById('toast');
-            toast.textContent = flashMessage;
-            if (flashType === 'success') {
-                toast.className = 'fixed right-6 bottom-6 z-50 max-w-sm w-full rounded-lg p-4 shadow-lg bg-emerald-600 text-white';
-            } else if (flashType === 'danger') {
-                toast.className = 'fixed right-6 bottom-6 z-50 max-w-sm w-full rounded-lg p-4 shadow-lg bg-red-600 text-white';
-            } else {
-                toast.className = 'fixed right-6 bottom-6 z-50 max-w-sm w-full rounded-lg p-4 shadow-lg bg-slate-700 text-white';
-            }
-            toast.classList.remove('hidden');
-            setTimeout(() => { toast.classList.add('hidden'); }, 4000);
+    // ✅ FIX: JS buzilmasligi uchun escapejs
+    const flashMessage = "{{ flash_message|default:''|escapejs }}";
+    const flashType = "{{ flash_type|default:''|escapejs }}";
+
+    if (flashMessage) {
+        const toast = document.getElementById('toast');
+        toast.textContent = flashMessage;
+
+        if (flashType === 'success') {
+            toast.className = 'fixed right-6 bottom-6 z-50 max-w-sm w-full rounded-lg p-4 shadow-lg bg-emerald-600 text-white';
+        } else if (flashType === 'danger') {
+            toast.className = 'fixed right-6 bottom-6 z-50 max-w-sm w-full rounded-lg p-4 shadow-lg bg-red-600 text-white';
+        } else {
+            toast.className = 'fixed right-6 bottom-6 z-50 max-w-sm w-full rounded-lg p-4 shadow-lg bg-slate-700 text-white';
         }
-    })();
+
+        toast.classList.remove('hidden');
+        setTimeout(() => { toast.classList.add('hidden'); }, 4000);
+    }
+})();
 </script>
 {% endblock %}
 {% endblock %}

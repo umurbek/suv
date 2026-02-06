@@ -5,6 +5,10 @@ from django.http import HttpResponse, JsonResponse
 import os
 
 from suv_tashish_crm.models import Courier, Client, Region, Admin, Notification
+from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from .models import UserProfile
 import uuid, csv
 try:
     from admin_panel.views import BASE_DIR
@@ -22,6 +26,12 @@ def redirect_to_admin_dashboard(request):
 
 def login_view(request):
     """Custom login supporting roles: admin, courier, client."""
+    # If user hasn't chosen a language yet, force chooser first
+    try:
+        if not request.session.get('lang'):
+            return redirect('choose_language')
+    except Exception:
+        pass
     # load CSV locations for client region select
     try:
         from admin_panel.views import read_csv_data
@@ -149,7 +159,22 @@ def login_view(request):
                     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                         return JsonResponse({'status': 'ok', 'next': '/admin_panel/dashboard/'})
                     return redirect('/admin_panel/dashboard/')
-                error = 'Admin login yoki parol noto‘g‘ri.'
+                # Scope admin auth errors to admin panel when login originated there.
+                msg = 'Admin login yoki parol noto‘g‘ri.'
+                referer = request.META.get('HTTP_REFERER', '') or ''
+                # If the request came from admin area, put the message into session
+                # so it will be shown on admin pages instead of the generic login page.
+                if '/admin_panel/' in referer or request.POST.get('admin_origin') == '1':
+                    try:
+                        request.session['admin_login_error'] = msg
+                    except Exception:
+                        pass
+                    # For AJAX, return JSON error; otherwise redirect back to admin area
+                    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                        return JsonResponse({'status': 'error', 'message': msg})
+                    next_url = referer if referer and '/admin_panel/' in referer else '/admin_panel/dashboard/'
+                    return redirect(next_url)
+                error = msg
 
         elif role == 'courier':
             name = (request.POST.get('courier_name') or '').strip()
@@ -314,9 +339,16 @@ def login_view(request):
                     send_telegram(text)
                 except Exception:
                     pass
+                # If client hasn't agreed to contract yet, send them to contract page first
+                next_url = '/client_panel/dashboard/'
+                try:
+                    if not getattr(client, 'agreed_to_contract', False):
+                        next_url = '/client_panel/contract/'
+                except Exception:
+                    pass
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                    return JsonResponse({'status': 'ok', 'next': '/client_panel/dashboard/'})
-                return redirect('/client_panel/dashboard/')
+                    return JsonResponse({'status': 'ok', 'next': next_url})
+                return redirect(next_url)
         else:
             error = 'Iltimos ro‘yni tanlang.'
 
@@ -348,15 +380,123 @@ def logout_view(request):
     return redirect('/login/')
 
 
+def register_view(request):
+    """Unified registration for admin, courier, client.
+
+    Creates a Django `User`, a `UserProfile` with `role`, and a corresponding
+    domain object (Admin, Courier, Client in suv_tashish_crm.models).
+    """
+    error = None
+    if request.method == 'POST':
+        role = request.POST.get('role')
+        username = (request.POST.get('username') or '').strip()
+        password = (request.POST.get('password') or '').strip()
+        full_name = (request.POST.get('full_name') or '').strip()
+        phone = (request.POST.get('phone') or '').strip()
+
+        if not role or role not in ('admin', 'courier', 'client'):
+            error = 'Iltimos ro\'lni tanlang.'
+        elif not username or not password:
+            error = 'Username va parol talab qilinadi.'
+        else:
+            UserModel = get_user_model()
+            if UserModel.objects.filter(username=username).exists():
+                error = 'Bu username allaqachon mavjud.'
+            else:
+                try:
+                    with transaction.atomic():
+                        user = UserModel.objects.create(username=username)
+                        user.set_password(password)
+                        # optional: set first/last name when full_name provided
+                        if full_name:
+                            parts = full_name.split()
+                            user.first_name = parts[0]
+                            if len(parts) > 1:
+                                user.last_name = ' '.join(parts[1:])
+                        user.save()
+                        # create profile
+                        prof = UserProfile.objects.create(user=user, role=role)
+                        # create domain-specific profile in this app for backward compatibility
+                        if role == 'admin':
+                            Admin.objects.create(user=user, full_name=full_name or username, phone=phone)
+                        elif role == 'courier':
+                            Courier.objects.create(user=user, full_name=full_name or username, phone=phone)
+                        elif role == 'client':
+                            # suv_tashish_crm.Client requires location_lat/location_lon; set defaults
+                            created_client = Client.objects.create(full_name=full_name or username, phone=phone or '', location_lat=0.0, location_lon=0.0)
+                except Exception as e:
+                    error = 'Ro\'yxatdan o\'tishda xatolik yuz berdi.'
+        if not error:
+            # If a client was just created, send them to contract page to accept terms
+            try:
+                if role == 'client' and 'created_client' in locals():
+                    request.session['role'] = 'client'
+                    request.session['client_id'] = created_client.id
+                    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                        return JsonResponse({'status': 'ok', 'next': '/client_panel/contract/'})
+                    return redirect('/client_panel/contract/')
+            except Exception:
+                pass
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'ok', 'next': '/login/'})
+            return redirect('/login/')
+
+    return render(request, 'register.html', {'error': error})
+
+
 def set_language(request):
     """Simple view to set session language. Accepts POST or GET `lang` value and redirects back."""
     lang = request.POST.get('lang') or request.GET.get('lang')
-    if lang in ('uz_lat', 'uz_cyrl', 'ru'):
+    if lang in ('uz_lat', 'uz_cyrl', 'ru', 'en'):
         try:
             request.session['lang'] = lang
+            # mark that user has explicitly chosen a language
+            request.session['language_chosen'] = True
         except Exception:
             pass
     # Redirect back to Referer or root
     next_url = request.META.get('HTTP_REFERER') or '/'
     return redirect(next_url)
+
+
+def choose_language(request):
+    """Render a simple language picker. On POST, set session lang and redirect to login.
+
+    This view is used as the root entry so users select the UI language first.
+    """
+    # Known codes accepted by our app (session keys used by language_context)
+    valid_codes = ('uz_lat', 'uz_cyrl', 'ru', 'en')
+    if request.method == 'POST':
+        lang = (request.POST.get('lang') or '').strip()
+        if lang in valid_codes:
+            try:
+                request.session['lang'] = lang
+                request.session['language_chosen'] = True
+            except Exception:
+                pass
+        return redirect('/login/')
+
+    # Do NOT auto-accept GET lang queries here — require explicit POST from chooser
+
+    # If user already chose language earlier, skip chooser and go to login
+    if request.session.get('language_chosen'):
+        return redirect('/login/')
+
+    # Render a minimal chooser; labels come from language files for preview
+    # We intentionally pass LANG_OPTIONS from context processor in templates.
+    return render(request, 'choose_language.html', {})
+
+
+def change_language(request):
+    """Clear the language_chosen flag so chooser will be shown, then redirect to chooser.
+
+    This is used from the login page 'Change language' link: it forces the language chooser
+    even if the user previously chose a language.
+    """
+    try:
+        if 'language_chosen' in request.session:
+            del request.session['language_chosen']
+    except Exception:
+        pass
+    return redirect('choose_language')
 
