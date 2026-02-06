@@ -30,7 +30,7 @@ def env_list(name: str, default=None):
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-change-me")  # PRODda env shart
 DEBUG = env_bool("DJANGO_DEBUG", True)
 
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", default=["*"] if DEBUG else ["localhost"])
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", default=[""] if DEBUG else ["localhost"])
 ADMIN_BOOTSTRAP_KEY = os.getenv("ADMIN_BOOTSTRAP_KEY", "")
 
 # -----------------------------------------------------------------------------
@@ -64,7 +64,6 @@ INSTALLED_APPS = [
     "courier_panel",
     "client_panel",
     "api",
-    "sslserver",
 ]
 
 MIDDLEWARE = [
