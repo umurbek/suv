@@ -8,6 +8,9 @@ xlsx_path = os.path.join(BASE_DIR, "data", "couriers.xlsx")
 csv_path = os.path.join(BASE_DIR, "Volidam.csv")
 
 
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+]
 
 # -----------------------------------------------------------------------------
 # ENV helpers
