@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-
+from suv_tashish_crm.models import Business
 
 class AdminProfile(models.Model):
     user = models.OneToOneField(
@@ -9,7 +9,7 @@ class AdminProfile(models.Model):
         related_name='admin_profile',
         verbose_name="Foydalanuvchi"
     )
-
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="admins", null=True)
     full_name = models.CharField(
         max_length=255,
         verbose_name="To‘liq ismi"

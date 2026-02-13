@@ -321,22 +321,29 @@ def admin_dashboard_view(request):
     forbidden = _require_admin(request)
     if forbidden:
         return forbidden
-
+    my_business = _get_my_business(request.user)
+    if not my_business:
+        return Response({"detail": "Siz hech qanday biznesga biriktirilmagansiz!"}, status=403)
     today = timezone.localdate()
 
-    today_orders = Order.objects.filter(created_at__date=today).count()
-    pending_count = Order.objects.filter(status__in=["assigned", "delivering"]).count()
+    today_orders = Order.objects.filter(business=my_business, created_at__date=today).count()
+    pending_count = Order.objects.filter(
+        business=my_business, 
+        status__in=["assigned", "delivering"]
+    ).count()
 
-    active = Courier.objects.filter(is_active=True).count()
-    total = Courier.objects.count()
+    active = Courier.objects.filter(business=my_business, is_active=True).count()
+    total = Courier.objects.filter(business=my_business).count()
 
     revenue_qs = Order.objects.filter(
-        Q(delivered_at__date=today) | (Q(status="done") & Q(created_at__date=today))
+            business=my_business,  # 👈 FILTR
+            status="done",
+            created_at__date=today
     )
     agg = revenue_qs.aggregate(total=Sum("payment_amount"))
     today_revenue = _to_int_amount(agg.get("total"), 0)
 
-    recent = Order.objects.select_related("client").order_by("-created_at")[:8]
+    recent = Order.objects.filter(business=my_business).select_related("client").order_by("-created_at")[:8]
     recent_orders = []
     for o in recent:
         client_name = getattr(getattr(o, "client", None), "full_name", None) or "Mijoz"
@@ -350,6 +357,7 @@ def admin_dashboard_view(request):
         })
 
     return Response({
+        "business_name": my_business.name,
         "today_orders": today_orders,
         "pending_count": pending_count,
         "active_couriers": {"active": active, "total": total},
@@ -364,11 +372,11 @@ def admin_orders_view(request):
     forbidden = _require_admin(request)
     if forbidden:
         return forbidden
-
+    my_business = _get_my_business(request.user)
     q = (request.GET.get("q") or "").strip()
     st = (request.GET.get("status") or "").strip().lower()
 
-    qs = Order.objects.select_related("client", "courier").all().order_by("-created_at")
+    qs = Order.objects.filter(business=my_business).select_related("client", "courier").order_by("-created_at")
 
     if st:
         qs = qs.filter(status=st)
@@ -425,8 +433,8 @@ def admin_couriers_view(request):
     forbidden = _require_admin(request)
     if forbidden:
         return forbidden
-
-    qs = Courier.objects.select_related("region").all().order_by("full_name")[:500]
+    my_business = _get_my_business(request.user)
+    qs = Courier.objects.filter(business=my_business).select_related("region").all().order_by("full_name")
     items = []
     for c in qs:
         items.append({
@@ -458,8 +466,8 @@ def admin_debtors_view(request):
     forbidden = _require_admin(request)
     if forbidden:
         return forbidden
-
-    qs = Client.objects.filter(debt__gt=0).select_related("region").order_by("-debt")[:300]
+    my_business = _get_my_business(request.user)
+    qs = Client.objects.filter(business=my_business, debt__gt=0).order_by("-debt")
     items = []
     for c in qs:
         debt_int = _to_int_amount(getattr(c, "debt", 0), 0)
@@ -1326,7 +1334,7 @@ def admin_courier_create_view(request):
     """Kuryer yaratish va parolni Flutterga qaytarish"""
     forbidden = _require_admin(request)
     if forbidden: return forbidden
-
+    my_business = _get_my_business(request.user)
     data = request.data or {}
     full_name = (data.get("full_name") or "").strip()
     phone_raw = (data.get("phone") or "").strip()
@@ -1348,7 +1356,7 @@ def admin_courier_create_view(request):
 
     courier, _ = Courier.objects.get_or_create(
         phone=phone,
-        defaults={"full_name": full_name, "user": user, "is_active": True}
+        defaults={"full_name": full_name, "user": user, "is_active": True,"business": my_business}
     )
     
     return Response({
@@ -1417,7 +1425,7 @@ def client_create_order_view(request):
         create_kwargs["lat"] = lat
         create_kwargs["lon"] = lon
 
-    o = Order.objects.create(**create_kwargs)
+    o = Order.objects.create(**create_kwargs,business=c.business,)
 
     # save client fallback location
     if lat is not None and lon is not None:
@@ -1429,4 +1437,17 @@ def client_create_order_view(request):
             pass
 
     return Response({"ok": True, "order_id": o.id}, status=status.HTTP_201_CREATED)
+
+def _get_my_business(user):
+    # 1. Agar Admin bo'lsa
+    if hasattr(user, 'admin_panel_profile') and user.admin_panel_profile.business:
+        return user.admin_panel_profile.business
+    # 2. Agar Kuryer bo'lsa
+    if hasattr(user, 'courier_profile') and user.courier_profile.business:
+        return user.courier_profile.business
+    # 3. Agar Klient bo'lsa
+    # (Klient modelida related_name='client_profile' bo'lsa yoki shunga o'xshash)
+    # ...
+    return None
+
 

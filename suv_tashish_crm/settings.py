@@ -33,7 +33,7 @@ def env_list(name: str, default=None):
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-change-me")  # PRODda env shart
 DEBUG = env_bool("DJANGO_DEBUG", True)
 
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", default=[""] if DEBUG else ["localhost"])
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", default=["*"] if DEBUG else ["localhost"])
 ADMIN_BOOTSTRAP_KEY = os.getenv("ADMIN_BOOTSTRAP_KEY", "")
 
 # -----------------------------------------------------------------------------
@@ -199,7 +199,7 @@ DEFAULT_FROM_EMAIL = os.getenv(
 )
 
 if USE_CONSOLE_EMAIL:
-    EMAIL_BACKEND = False
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 else:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
     EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")

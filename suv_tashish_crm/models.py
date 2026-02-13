@@ -10,7 +10,13 @@ class Region(models.Model):
     def __str__(self):
         return self.name
 
+class Business(models.Model):
+    name = models.CharField(max_length=255, verbose_name="Biznes nomi")
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
 
+    def __str__(self):
+        return self.name
 # ================= ADMIN =================
 class Admin(models.Model):
     user = models.OneToOneField(
@@ -44,7 +50,7 @@ class Courier(models.Model):
     region = models.ForeignKey(Region, on_delete=models.SET_NULL, null=True, blank=True)
     telegram_id = models.CharField(max_length=50, null=True, blank=True)
     is_active = models.BooleanField(default=True)
-
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="couriers", null=True)
     # ✅ first login: password change majburiy
     must_change_password = models.BooleanField(default=True)
 
@@ -67,7 +73,7 @@ class Client(models.Model):
         related_name="suv_client_profile",
         related_query_name="suv_client_profile",
     )
-
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="clients", null=True)
     full_name = models.CharField(max_length=255)
     first_name = models.CharField(max_length=150, null=True, blank=True)
     last_name = models.CharField(max_length=150, null=True, blank=True)
@@ -152,7 +158,7 @@ class Order(models.Model):
 
     bottles = models.PositiveIntegerField(default=1, verbose_name="Suv miqdori (dona)")
     note = models.TextField(null=True, blank=True)
-
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="orders", null=True)
     # GPS koordinatalar
     lat = models.DecimalField(max_digits=22, decimal_places=16, null=True, blank=True)
     lon = models.DecimalField(max_digits=22, decimal_places=16, null=True, blank=True)
