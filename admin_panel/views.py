@@ -1789,16 +1789,22 @@ def admin_clients_upload_excel(request):
     if not _is_admin(request):
         return redirect("admin_panel:clients_list")
 
+    # Joriy adminning biznesini aniqlash
+    my_business = _get_my_business(request.user) #
+    if not my_business:
+        messages.error(request, "Sizga biznes biriktirilmagan!")
+        return redirect("admin_panel:clients_list")
+
     f = request.FILES.get("excel_file")
     if not f or not f.name.lower().endswith(".xlsx"):
         messages.error(request, "Faqat .xlsx formatdagi faylni tanlang.")
         return redirect("admin_panel:clients_list")
 
     try:
+        from openpyxl import load_workbook # Importni tekshiring
         wb = load_workbook(filename=f, data_only=True)
         ws = wb.active
         
-        # Fayl sarlavhalari (suv.xlsx ga mos)
         expected = ["full_name", "bottle_soni", "manzili", "phone"]
         header = [str(ws.cell(row=1, column=i).value).strip().lower() for i in range(1, 5)]
 
@@ -1814,31 +1820,31 @@ def admin_clients_upload_excel(request):
             phone_raw = row[3]
             phone_norm = _norm_phone(phone_raw)
 
-            if not name: # Ism bo'lishi shart
+            if not name:
                 skipped += 1
                 continue
 
-            # Agar telefon bo'lsa, bazada borligini tekshiramiz
-            if phone_norm and Client.objects.filter(phone=phone_norm).exists():
+            # Faqat shu biznes ichida telefon raqami borligini tekshiramiz
+            if phone_norm and Client.objects.filter(phone=phone_norm, business=my_business).exists():
                 skipped += 1
                 continue
 
             try:
-                # Bottle sonini xavfsiz o'girish
                 try:
                     b_val = int(float(row[1])) if row[1] not in (None, "") else 0
                 except:
                     b_val = 0
 
+                # MIJOZNI YARATISH (Biznesga biriktirilgan holda)
                 Client.objects.create(
+                    business=my_business, # 👈 MUHIM: Multi-tenancy
                     full_name=name,
-                    phone=phone_norm if phone_norm else None, # Raqam bo'lmasa None
+                    phone=phone_norm if phone_norm else None,
                     address=str(row[2]).strip() if row[2] else "",
-                    bottle_balance=b_val,
-                    source="admin"
+                    bottle_balance=b_val
                 )
                 created += 1
-            except:
+            except Exception as e:
                 skipped += 1
 
         messages.success(request, f"{created} ta mijoz yuklandi, {skipped} ta o'tkazib yuborildi.")
