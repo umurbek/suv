@@ -1789,10 +1789,10 @@ def admin_clients_upload_excel(request):
     if not _is_admin(request):
         return redirect("admin_panel:clients_list")
 
-    # Joriy adminning biznesini aniqlash
-    my_business = _get_my_business(request.user) #
+    # Joriy admin biznesini aniqlash
+    my_business = _get_my_business(request.user)
     if not my_business:
-        messages.error(request, "Sizga biznes biriktirilmagan!")
+        messages.error(request, "Sizga biznes biriktirilmagan! Admin panelda biznesni tekshiring.")
         return redirect("admin_panel:clients_list")
 
     f = request.FILES.get("excel_file")
@@ -1801,15 +1801,16 @@ def admin_clients_upload_excel(request):
         return redirect("admin_panel:clients_list")
 
     try:
-        from openpyxl import load_workbook # Importni tekshiring
+        from openpyxl import load_workbook
         wb = load_workbook(filename=f, data_only=True)
         ws = wb.active
         
+        # Headerlarni tekshirish
         expected = ["full_name", "bottle_soni", "manzili", "phone"]
         header = [str(ws.cell(row=1, column=i).value).strip().lower() for i in range(1, 5)]
 
         if header != expected:
-            messages.error(request, f"Header xato! Kerakli: {', '.join(expected)}")
+            messages.error(request, f"Excel sarlavhasi xato! Kerakli: {', '.join(expected)}")
             return redirect("admin_panel:clients_list")
 
         created, skipped = 0, 0
@@ -1818,37 +1819,40 @@ def admin_clients_upload_excel(request):
             
             name = str(row[0]).strip() if row[0] else ""
             phone_raw = row[3]
-            phone_norm = _norm_phone(phone_raw)
+            phone_norm = _norm_phone(phone_raw) # Telefonni formatlash
 
             if not name:
                 skipped += 1
                 continue
 
-            # Faqat shu biznes ichida telefon raqami borligini tekshiramiz
+            # Faqat shu biznes ichida takrorlanishni tekshirish
             if phone_norm and Client.objects.filter(phone=phone_norm, business=my_business).exists():
                 skipped += 1
                 continue
 
             try:
+                # Bottle sonini o'girish
                 try:
-                    b_val = int(float(row[1])) if row[1] not in (None, "") else 0
+                    b_val = int(float(row[1])) if row[1] not in (None, "") else 1
                 except:
-                    b_val = 0
+                    b_val = 1
 
-                # MIJOZNI YARATISH (Biznesga biriktirilgan holda)
+                # Client modeliga moslab saqlash
                 Client.objects.create(
-                    business=my_business, # 👈 MUHIM: Multi-tenancy
+                    business=my_business,  # 👈 Multi-tenancy ulanishi
                     full_name=name,
-                    phone=phone_norm if phone_norm else None,
-                    address=str(row[2]).strip() if row[2] else "",
-                    bottle_balance=b_val
+                    phone=phone_norm if phone_norm else f"no_phone_{uuid.uuid4().hex[:6]}",
+                    note=str(row[2]).strip() if row[2] else "", # 'manzili' -> 'note'ga tushadi
+                    bottle_balance=b_val,
+                    must_change_password=True
                 )
                 created += 1
             except Exception as e:
+                print(f"Row error: {e}") # Debug uchun
                 skipped += 1
 
-        messages.success(request, f"{created} ta mijoz yuklandi, {skipped} ta o'tkazib yuborildi.")
+        messages.success(request, f"Muvaffaqiyatli: {created} ta mijoz. O'tkazildi: {skipped} ta.")
     except Exception as e:
-        messages.error(request, f"Xatolik: {str(e)}")
+        messages.error(request, f"Tizim xatosi: {str(e)}")
     
     return redirect("admin_panel:clients_list")
