@@ -1766,130 +1766,83 @@ def delete_client(request, client_id):
     c.delete()
     messages.success(request, "Mijoz o‘chirildi.")
     return redirect("admin_panel:clients_list") 
-
-
-
 import re
 from openpyxl import load_workbook
 from django.shortcuts import redirect
 from django.contrib import messages
 from django.views.decorators.http import require_POST
-from django.db import transaction
-
 from suv_tashish_crm.models import Client
-
-
 def _norm_phone(phone) -> str:
-    if not phone:
-        return ""
-    s = str(phone).strip()
-    s = s.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-    s = s.replace(".0", "")
+    if not phone or str(phone).strip() in ["None", ""]: return ""
+    s = str(phone).strip().replace(" ", "").replace("-", "").replace("(", "").replace(")", "").replace(".0", "")
     digits = re.sub(r"\D", "", s)
-
-    if digits.startswith("998") and len(digits) >= 12:
-        return "+" + digits[:12]
-    if len(digits) == 9:
-        return "+998" + digits
-    if s.startswith("+") and len(digits) >= 12:
-        return "+" + digits[:12]
+    if digits.startswith("998") and len(digits) >= 12: return "+" + digits[:12]
+    if len(digits) == 9: return "+998" + digits
+    if s.startswith("+") and len(digits) >= 12: return "+" + digits[:12]
     return ""
-
 
 def _is_admin(request) -> bool:
     return bool(request.session.get("admin_id"))
 
-
 @require_POST
 def admin_clients_upload_excel(request):
     if not _is_admin(request):
-        messages.error(request, "Ruxsat yo‘q. Faqat admin yuklay oladi.")
         return redirect("admin_panel:clients_list")
 
     f = request.FILES.get("excel_file")
-    if not f:
-        messages.error(request, "Excel fayl tanlanmadi.")
-        return redirect("admin_panel:clients_list")
-
-    if not f.name.lower().endswith(".xlsx"):
-        messages.error(request, "Faqat .xlsx format qabul qilinadi.")
+    if not f or not f.name.lower().endswith(".xlsx"):
+        messages.error(request, "Faqat .xlsx formatdagi faylni tanlang.")
         return redirect("admin_panel:clients_list")
 
     try:
         wb = load_workbook(filename=f, data_only=True)
         ws = wb.active
-    except Exception:
-        messages.error(request, "Excel faylni o‘qib bo‘lmadi. Fayl buzilgan bo‘lishi mumkin.")
-        return redirect("admin_panel:clients_list")
+        
+        # Fayl sarlavhalari (suv.xlsx ga mos)
+        expected = ["full_name", "bottle_soni", "manzili", "phone"]
+        header = [str(ws.cell(row=1, column=i).value).strip().lower() for i in range(1, 5)]
 
-    # ✅ HEADER: full_name | bottle_soni | manzili | phone
-    expected = ["full_name", "bottle_count", "address", "phone"]
-    header = []
-    for i in range(1, 5):
-        v = ws.cell(row=1, column=i).value
-        header.append(str(v).strip().lower() if v else "")
+        if header != expected:
+            messages.error(request, f"Header xato! Kerakli: {', '.join(expected)}")
+            return redirect("admin_panel:clients_list")
 
-    if header != expected:
-        messages.error(request, f"Header noto‘g‘ri. Kerakli: {expected}")
-        return redirect("admin_panel:clients_list")
+        created, skipped = 0, 0
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row or not any(row): continue
+            
+            name = str(row[0]).strip() if row[0] else ""
+            phone_raw = row[3]
+            phone_norm = _norm_phone(phone_raw)
 
-    created = 0
-    skipped = 0
-    errors = []
-
-    with transaction.atomic():
-        for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-            full_name, bottle_soni, manzili, phone = (list(row[:4]) + [None, None, None, None])[:4]
-
-            name = (str(full_name).strip() if full_name else "")
-            phone_norm = _norm_phone(phone)
-            address = (str(manzili).strip() if manzili else "")
-
-            try:
-                bottle = int(bottle_soni) if bottle_soni not in (None, "") else 0
-            except:
-                bottle = 0
-
-            if not name or not phone_norm:
+            if not name: # Ism bo'lishi shart
                 skipped += 1
                 continue
 
-            if Client.objects.filter(phone=phone_norm).exists():
+            # Agar telefon bo'lsa, bazada borligini tekshiramiz
+            if phone_norm and Client.objects.filter(phone=phone_norm).exists():
                 skipped += 1
                 continue
 
             try:
-                client = Client(full_name=name, phone=phone_norm)
+                # Bottle sonini xavfsiz o'girish
+                try:
+                    b_val = int(float(row[1])) if row[1] not in (None, "") else 0
+                except:
+                    b_val = 0
 
-                # ✅ manzil (qaysi field bo‘lsa shunga yozadi)
-                if hasattr(client, "address"):
-                    client.address = address
-                elif hasattr(client, "manzil"):
-                    client.manzil = address
-                elif hasattr(client, "manzili"):
-                    client.manzili = address
-
-                # ✅ bottle (qaysi field bo‘lsa shunga yozadi)
-                if hasattr(client, "bottle_balance"):
-                    client.bottle_balance = bottle
-                elif hasattr(client, "bottle_soni"):
-                    client.bottle_soni = bottle
-
-                # ✅ source
-                if hasattr(client, "source"):
-                    client.source = "admin"
-
-                client.save()
-
-
+                Client.objects.create(
+                    full_name=name,
+                    phone=phone_norm if phone_norm else None, # Raqam bo'lmasa None
+                    address=str(row[2]).strip() if row[2] else "",
+                    bottle_balance=b_val,
+                    source="admin"
+                )
                 created += 1
+            except:
+                skipped += 1
 
-            except Exception as e:
-                errors.append(f"{row_idx}-qator: {e}")
-
-    if errors:
-        messages.warning(request, f"Yuklandi: {created}, o‘tkazib yuborildi: {skipped}. Xatolar: {len(errors)} ta.")
-    else:
-        messages.success(request, f"Yuklandi: {created} ta. O‘tkazib yuborildi: {skipped} ta.")
-
+        messages.success(request, f"{created} ta mijoz yuklandi, {skipped} ta o'tkazib yuborildi.")
+    except Exception as e:
+        messages.error(request, f"Xatolik: {str(e)}")
+    
     return redirect("admin_panel:clients_list")

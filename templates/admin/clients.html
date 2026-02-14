@@ -3,217 +3,97 @@
 
 <div class="px-6 py-6 bg-[#0f172a] min-h-screen text-white">
   <div class="flex items-center justify-between mb-8">
-    <h1 class="text-2xl font-bold tracking-tight text-white">Mijozlar profillari</h1>
+    <h1 class="text-2xl font-bold text-white">Mijozlar profillari</h1>
 
     <div class="flex items-center gap-2">
-      <input
-        id="client-search"
-        class="bg-[#1e293b] text-white border border-gray-700 px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-72 placeholder-gray-400"
-        placeholder="Qidiruv: ism yoki telefon"
-      />
-      <button
-        id="clear-client-search"
-        type="button"
-        class="bg-[#334155] text-white hover:bg-[#475569] px-4 py-2 rounded-md transition-all font-medium border border-gray-600"
-      >
-        Tozalash
-      </button>
-
-      <!-- ✅ EXPORT (Yuklab olish) -->
-     <form action="{% url 'admin_panel:clients_export_excel' %}" method="get">
-        <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold">
-            Export
-        </button>
-        </form>
-
-
-      <!-- ✅ BITTA FORM: Excel yuklash + Import -->
-      <form
-        id="excelTopForm"
-        action="{% url 'admin_panel:clients_upload_excel' %}"
-        method="post"
-        enctype="multipart/form-data"
-        class="flex items-center gap-2"
-      >
-        {% csrf_token %}
-        <input
-          type="file"
-          name="excel_file"
-          accept=".xlsx"
-          class="hidden"
-          id="excelInputMain"
-          required
-          onchange="excelPicked(this)"
-        >
-
-        <button
-          type="button"
-          onclick="openExcelHelp()"
-          class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-        >
+      <div class="flex items-center gap-2">
+        <input type="file" id="excelInputMain" accept=".xlsx" class="hidden" onchange="excelPicked(this)">
+        
+        <button type="button" onclick="openExcelHelp()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
           Excel yuklash
         </button>
 
-        <!-- ✅ Import HAR DOIM aktiv -->
-        <button
-          id="excelImportBtn"
-          type="submit"
-          class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold"
-        >
+        <button type="button" id="importBtn" onclick="startUploadWithProgress()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all">
           Import
         </button>
-      </form>
+      </div>
     </div>
   </div>
 
-  <div id="clients-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-    {% for c in clients %}
-    <div class="bg-[#1e293b] text-white p-6 rounded-xl shadow-2xl border border-gray-700 flex flex-col justify-between hover:border-blue-500 transition-colors group">
-      <div>
-        <div class="flex justify-between items-start mb-4 border-b border-gray-700 pb-3">
-          <h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">{{ c.full_name }}</h3>
-        </div>
-
-        <div class="space-y-3 mb-6">
-          <div class="flex justify-between items-start text-sm">
-            <span class="text-gray-400 font-medium">Manzil</span>
-            <span class="text-right text-gray-200">{{ c.address|default:"Manzil yo‘q" }}</span>
-          </div>
-
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-400 font-medium">Telefon</span>
-            <span class="text-right font-bold text-blue-300">{{ c.phone|default:"—" }}</span>
-          </div>
-
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-400 font-medium">So‘nggi buyurtma</span>
-            <span class="text-right text-gray-300">{{ c.last_order_date|default:"—" }}</span>
-          </div>
-
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-400 font-medium">Baklashka balansi</span>
-            <span class="text-right font-bold text-blue-400 text-lg">{{ c.bottle_balance|default:0 }}</span>
-          </div>
-
-          <div class="flex justify-between text-sm border-t border-gray-700 pt-3">
-            <span class="text-gray-400 font-medium">Qarz</span>
-            <span class="text-right font-bold {% if c.debt > 0 %}text-red-400 text-lg{% else %}text-green-400{% endif %}">
-              {{ c.debt|default:0 }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div class="flex gap-3 mt-auto">
-        <a href="{% url 'admin_panel:edit_client' c.id %}" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-center py-2.5 rounded-lg font-bold transition-all shadow-lg active:scale-95">
-          Tahrirlash
-        </a>
-        <form method="post" action="{% url 'admin_panel:delete_client' c.id %}" onsubmit="return confirm('Mijozni o‘chirishni xohlaysizmi?');" class="flex-1">
-          {% csrf_token %}
-          <button type="submit" class="w-full bg-[#ef4444] hover:bg-red-500 text-white py-2.5 rounded-lg font-bold transition-all shadow-lg active:scale-95">
-            O‘chirish
-          </button>
-        </form>
-      </div>
-    </div>
-    {% empty %}
-    <div class="col-span-full flex flex-col items-center justify-center py-24 bg-[#1e293b] rounded-2xl border-2 border-dashed border-gray-700">
-      <p class="text-2xl text-gray-500 font-medium">Mijozlar topilmadi.</p>
-    </div>
-    {% endfor %}
+  <div id="progressWrapper" class="hidden w-full bg-gray-800 rounded-full h-6 overflow-hidden border border-gray-700 mb-6">
+      <div id="progressBar" class="bg-blue-500 h-full text-xs font-bold text-white flex items-center justify-center transition-all" style="width: 0%">0%</div>
   </div>
-</div>
 
-<!-- ✅ MODAL: Yangi Excel format -->
-<div id="excelHelpModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50">
-  <div class="bg-[#0b1220] text-slate-200 rounded-2xl w-full max-w-3xl p-6 relative border border-slate-700 shadow-2xl">
-    <button type="button" onclick="closeExcelHelp()" class="absolute top-3 right-3 text-slate-400 hover:text-white text-2xl">✕</button>
+  </div>
 
-    <h2 class="text-2xl font-black mb-2 text-emerald-400">Excel yuklash formati</h2>
-    <p class="text-sm text-slate-400 mb-4">
-      Fayl <b>.xlsx</b> bo‘lishi shart. 1-qator header aynan quyidagicha bo‘lsin.
-    </p>
-
-    <div class="overflow-x-auto mb-4 rounded-xl border border-slate-700">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-800">
-          <tr>
-            <th class="border border-slate-700 px-3 py-2">full_name</th>
-            <th class="border border-slate-700 px-3 py-2">bottle_soni</th>
-            <th class="border border-slate-700 px-3 py-2">manzili</th>
-            <th class="border border-slate-700 px-3 py-2">phone</th>
-          </tr>
-        </thead>
-        <tbody class="bg-slate-900">
-          <tr>
-            <td class="border border-slate-700 px-3 py-2">Rahimov Rahim</td>
-            <td class="border border-slate-700 px-3 py-2">4</td>
-            <td class="border border-slate-700 px-3 py-2">Boysoni</td>
-            <td class="border border-slate-700 px-3 py-2">+998901234567</td>
-          </tr>
-        </tbody>
-      </table>
+<div id="excelHelpModal" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50">
+  <div class="bg-[#0b1220] rounded-2xl w-full max-w-2xl p-6 border border-slate-700">
+    <h2 class="text-2xl font-black mb-4 text-emerald-400">Excel yuklash formati</h2>
+    <p class="text-sm text-slate-400 mb-4">Fayl <b>.xlsx</b> bo'lishi va 1-qator headerlari quyidagicha bo'lishi shart:</p>
+    <div class="bg-slate-900 p-4 rounded-lg border border-slate-700 mb-6 font-mono text-xs">
+        full_name | bottle_soni | manzili | phone
     </div>
-
-    <div class="text-sm text-slate-400 space-y-1 mb-6">
-      <div>✅ Header aynan: <b>full_name, bottle_soni, manzili, phone</b></div>
-      <div>✅ full_name va phone bo‘sh bo‘lmasin</div>
-      <div>✅ phone: +998901234567 / 998901234567 / 901234567</div>
-      <div>✅ bottle_soni son (0,1,2...)</div>
-      <div>❌ Faqat <b>.xlsx</b> qabul qilinadi</div>
-    </div>
-
     <div class="flex justify-end gap-3">
-      <button type="button" onclick="closeExcelHelp()" class="px-5 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold">
-        Bekor
-      </button>
-      <button type="button" onclick="selectExcelFile()" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold">
-        Yuklashni davom ettirish
-      </button>
+      <button onclick="closeExcelHelp()" class="px-5 py-2 rounded-lg bg-slate-700 text-white">Bekor</button>
+      <button onclick="selectExcelFile()" class="px-5 py-2 rounded-lg bg-blue-600 text-white font-bold">Faylni tanlash</button>
     </div>
   </div>
 </div>
 
 <script>
-  // Search
-  const search = document.getElementById('client-search');
-  const clearBtn = document.getElementById('clear-client-search');
+  function openExcelHelp() { document.getElementById('excelHelpModal').classList.replace('hidden', 'flex'); }
+  function closeExcelHelp() { document.getElementById('excelHelpModal').classList.replace('flex', 'hidden'); }
+  function selectExcelFile() { document.getElementById("excelInputMain").click(); }
 
-  if (search) {
-    search.addEventListener('input', () => {
-      const q = search.value.trim().toLowerCase();
-      const cards = document.querySelectorAll('#clients-grid > div:not(.col-span-full)');
-      cards.forEach(card => {
-        const text = card.innerText.toLowerCase();
-        card.style.display = (q === '' || text.includes(q)) ? 'flex' : 'none';
-      });
-    });
-  }
-
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      search.value = '';
-      search.dispatchEvent(new Event('input'));
-    });
-  }
-
-  // Modal open/close
-  function openExcelHelp() {
-    const m = document.getElementById('excelHelpModal');
-    m.classList.remove('hidden');
-    m.classList.add('flex');
-  }
-  function closeExcelHelp() {
-    const m = document.getElementById('excelHelpModal');
-    m.classList.add('hidden');
-    m.classList.remove('flex');
-  }
-  function selectExcelFile() {
-    document.getElementById("excelInputMain").click();
-  }
-  // file tanlansa modal yopiladi
   function excelPicked(input) {
-    if (input.files && input.files.length > 0) closeExcelHelp();
+    if (input.files.length > 0) {
+      closeExcelHelp();
+      const btn = document.getElementById('importBtn');
+      btn.innerText = "Tayyor: " + input.files[0].name.substring(0, 10) + "...";
+      btn.classList.replace('bg-blue-600', 'bg-emerald-600');
+    }
+  }
+
+  function startUploadWithProgress() {
+    const fileInput = document.getElementById('excelInputMain');
+    const importBtn = document.getElementById('importBtn');
+    const wrapper = document.getElementById('progressWrapper');
+    const bar = document.getElementById('progressBar');
+
+    if (fileInput.files.length === 0) {
+      alert("Iltimos, avval faylni tanlang!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('excel_file', fileInput.files[0]);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    const xhr = new XMLHttpRequest();
+    wrapper.classList.remove('hidden');
+    importBtn.disabled = true;
+
+    xhr.upload.onprogress = function(e) {
+      if (e.lengthComputable) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        bar.style.width = percent + '%';
+        bar.innerText = percent + '%';
+        if (percent === 100) bar.innerText = "Saqlanmoqda...";
+      }
+    };
+
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        window.location.reload();
+      } else {
+        alert("Xato yuz berdi!");
+        wrapper.classList.add('hidden');
+        importBtn.disabled = false;
+      }
+    };
+
+    xhr.open('POST', "{% url 'admin_panel:clients_upload_excel' %}", true);
+    xhr.send(formData);
   }
 </script>
 
